@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Queue - Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: #f4f7f6; color: #1f2a3a; min-height: 100vh; }
+        .navbar { background: #1a428a; color: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .navbar h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
+        .btn-logout { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-logout:hover { background: #c0392b; }
+        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .card { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border-top: 5px solid #1a428a; }
+        .card.danger-card { border-top-color: #e74c3c; }
+        .card.warning-card { border-top-color: #e67e22; }
+        .info-card { border-top-color: #27ae60; grid-column: 1 / -1; } 
+        .card h2 { font-size: 1.3rem; margin-bottom: 20px; color: #1a428a; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #444; }
+        .input-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
+        .btn-action { width: 100%; padding: 12px; color: white; border: none; border-radius: 5px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-bottom: 10px; }
+        .btn-kick { background: #e67e22; } .btn-kick:hover { background: #d35400; }
+        .btn-ban { background: #e74c3c; } .btn-ban:hover { background: #c0392b; }
+        .btn-role { background: #369baf; } .btn-role:hover { background: #2a7a8a; }
+        .btn-sys { background: #333; } .btn-sys:hover { background: #000; }
+        .status-msg { font-size: 0.85rem; font-weight: 600; min-height: 15px; }
+        .text-success { color: #27ae60; } .text-error { color: #e74c3c; }
+        .user-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .user-list li { padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; color: #334155; }
+        .user-list .user-header { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+        .user-list .user-location { font-size: 0.85rem; color: #64748b; margin-left: 24px; }
+        .online-dot { width: 12px; height: 12px; background: #2ecc71; border-radius: 50%; box-shadow: 0 0 8px rgba(46, 204, 113, 0.6); animation: pulse 2s infinite; flex-shrink: 0; }
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(46, 204, 113, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>PSA User Management System</h1>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <span id="adminEmailDisplay" style="font-size: 0.9rem; opacity: 0.8;"></span>
+            <button id="btnLogout" class="btn-logout">Sign Out</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="card warning-card">
+            <h2>Active Session Control</h2>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Instantly force a user to log out.</p>
+            <div class="input-group"><input type="email" id="kickEmail" placeholder="staff@psa.gov.ph"></div>
+            <button id="btnKick" class="btn-action btn-kick">Kick User</button>
+            <div id="kickStatus" class="status-msg text-success"></div>
+        </div>
+
+        <div class="card danger-card">
+            <h2>Account Access Control</h2>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Permanently ban or promote staff.</p>
+            <div class="input-group"><input type="email" id="accessEmail" placeholder="staff@psa.gov.ph"></div>
+            <div style="display: flex; gap: 10px;">
+                <button id="btnBan" class="btn-action btn-ban" style="flex: 1;">Ban User</button>
+                <button id="btnMakeAdmin" class="btn-action btn-role" style="flex: 1;">Make Admin</button>
+            </div>
+            <div id="accessStatus" class="status-msg"></div>
+        </div>
+
+        <div class="card" style="grid-column: 1 / -1; text-align: center;">
+            <h2>System-Wide Controls</h2>
+            <button id="btnResetQueues" class="btn-action btn-sys" style="max-width: 300px; margin: 0 auto;">Reset All Queues to 0</button>
+        </div>
+
+        <div class="card info-card">
+            <h2>Currently Online</h2>
+            <ul id="activeUsersContainer" class="user-list"><li style="color: #888; font-weight: normal;">Loading active users...</li></ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
+            authDomain: "queue-project-login.firebaseapp.com",
+            projectId: "queue-project-login",
+            storageBucket: "queue-project-login.firebasestorage.app",
+            messagingSenderId: "869956656004",
+            appId: "1:869956656004:web:3d2a98bea880c701605bd1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const socket = io();
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const response = await fetch('/api/get-role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: user.email }) });
+                const data = await response.json();
+                const role = data.role || 'controller';
+
+                if (role !== 'admin') {
+                    alert("Unauthorized.");
+                    signOut(auth).then(() => window.location.href = "login.html");
+                    return;
+                }
+
+                document.getElementById('adminEmailDisplay').innerText = `Admin: ${user.email} (${role})`;
+                socket.emit('register_active_user', { email: user.email, role, location: 'Admin Dashboard' });
+            } else {
+                window.location.href = "login.html";
+            }
+        });
+
+        socket.on('force_logout_signal', (kickedEmail) => {
+            const currentUser = auth.currentUser;
+            if (currentUser && currentUser.email === kickedEmail) {
+                alert("Session Terminated: You logged in from another device.");
+                signOut(auth).then(() => { 
+                    localStorage.clear(); 
+                    window.location.href = "login.html"; 
+                });
+            }
+        });
+
+        // UPDATED: Render the user's location underneath their email
+        socket.on('active_users_list', (users) => {
+            const container = document.getElementById('activeUsersContainer');
+            if (users.length === 0) return container.innerHTML = '<li style="color: #888; font-weight: normal;">No users online.</li>';
+            
+            container.innerHTML = users.map(user => `
+                <li>
+                    <div class="user-header">
+                        <div class="online-dot"></div>
+                        <span>${user.email}</span>
+                    </div>
+                    <div class="user-location">
+                        <strong>${user.role || 'controller'}</strong> · ${user.location}
+                    </div>
+                </li>
+            `).join('');
+        });
+
+        document.getElementById('btnKick').addEventListener('click', () => {
+            const email = document.getElementById('kickEmail').value;
+            if (!email) return;
+            socket.emit('kick_user', email);
+            document.getElementById('kickStatus').innerText = `Sign-out signal broadcasted.`;
+            document.getElementById('kickEmail').value = ''; 
+            setTimeout(() => document.getElementById('kickStatus').innerText = '', 4000);
+        });
+
+        const handleAccessChange = async (endpoint, successMsg) => {
+            const email = document.getElementById('accessEmail').value;
+            const status = document.getElementById('accessStatus');
+            if (!email) return status.innerText = "Please enter an email.";
+
+            try {
+                const bodyData = endpoint === '/api/set-role' ? { email, role: 'admin' } : { email };
+                const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyData) });
+                const data = await response.json();
+                
+                if (data.success) {
+                    status.className = "status-msg text-success";
+                    status.innerText = successMsg;
+                    document.getElementById('accessEmail').value = '';
+                    if (endpoint === '/api/ban-user') socket.emit('kick_user', email);
+                }
+            } catch (err) { status.innerText = "Error updating database."; }
+            setTimeout(() => status.innerText = '', 4000);
+        };
+
+        document.getElementById('btnBan').addEventListener('click', () => { if(confirm("Permanently ban user?")) handleAccessChange('/api/ban-user', "User banned and kicked."); });
+        document.getElementById('btnMakeAdmin').addEventListener('click', () => { if(confirm("Promote to Admin?")) handleAccessChange('/api/set-role', "User promoted to Admin."); });
+        document.getElementById('btnResetQueues').addEventListener('click', () => { if(confirm("Reset all queues?")) socket.emit('reset_queues'); });
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            signOut(auth).then(() => { localStorage.removeItem('psa_admin_token'); localStorage.removeItem('psa_role'); window.location.href = "login.html"; });
+        });
+    </script>
+</body>
+</html>

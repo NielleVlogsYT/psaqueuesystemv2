@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Controller - Landscape</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root { 
+            --psa-blue: #0038A8; 
+            --psa-red: #D10000; 
+            --psa-green: #28a745; 
+            --bg-glass: rgba(255, 255, 255, 0.95);
+        }
+
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #0a0e14 url('/res/main_bg.jpg') no-repeat center center fixed; 
+            background-size: cover; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header-nav { 
+            background: white; 
+            width: 95%; 
+            margin: 15px auto; 
+            padding: 10px 25px; 
+            border-radius: 15px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        }
+        .logo-section { display: flex; align-items: center; gap: 15px; }
+        .logo-section i { font-size: 2rem; color: var(--psa-blue); }
+        .title-text h1 { margin: 0; font-size: 1.1rem; color: var(--psa-blue); text-transform: uppercase; }
+        .title-text p { margin: 0; font-size: 0.9rem; font-weight: bold; color: #555; }
+        .title-text .user-meta { margin-top: 6px; color: #444; font-size: 0.9rem; font-weight: 600; }
+
+        .content-grid {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            padding: 0 2.5% 20px 2.5%;
+            height: calc(100vh - 120px);
+        }
+
+        .controller-panel {
+            flex: 1.5;
+            background: var(--bg-glass);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .tickets-panel {
+            flex: 1;
+            background: rgba(0, 56, 168, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .window-badge { background: var(--psa-blue); color: white; padding: 5px 20px; border-radius: 50px; font-weight: bold; margin-bottom: 10px; }
+        .serving-label { color: #666; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; }
+        .ticket-display { font-size: 5.5rem; font-weight: 900; color: #111; margin: 10px 0; font-family: 'Courier New', monospace; border-bottom: 5px solid var(--psa-blue); min-width: 350px; }
+
+        .control-btns { display: flex; gap: 30px; margin-top: 30px; }
+        .action-btn { border: none; border-radius: 20px; cursor: pointer; width: 160px; padding: 20px 10px; transition: 0.3s; color: white; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .action-btn i { font-size: 2.2rem; }
+        .action-btn span { font-weight: bold; font-size: 0.85rem; text-transform: uppercase; }
+        
+        .btn-terminate { background: var(--psa-red); }
+        .btn-complete { background: var(--psa-green); }
+        .action-btn:hover { filter: brightness(1.1); transform: translateY(-3px); }
+
+        .queue-title { font-size: 1.2rem; font-weight: 800; border-bottom: 2px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 15px; }
+        .ticket-scroll { overflow-y: auto; flex: 1; }
+        .ticket-card { background: rgba(255,255,255,0.15); border-radius: 18px; padding: 20px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 12px; }
+        .ticket-label { font-weight: 800; font-size: 1.3rem; }
+        .ticket-meta { color: rgba(255,255,255,0.8); font-size: 0.95rem; }
+        .assign-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .assign-btn { font-weight: 700; border: none; border-radius: 12px; padding: 10px 16px; cursor: pointer; color: white; background: #0038A8; transition: transform 0.2s ease, filter 0.2s ease; }
+        .assign-btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+        .assign-btn.secondary { background: #6c757d; }
+
+        .empty-queue-msg {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+        }
+
+        /* --- Custom Confirmation Modal Styles --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(6px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+            opacity: 0; visibility: hidden; transition: 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1; visibility: visible;
+        }
+        .modal-box {
+            background: var(--bg-glass);
+            padding: 30px 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px; width: 90%;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            transform: translateY(-30px); transition: 0.3s ease;
+        }
+        .modal-overlay.active .modal-box {
+            transform: translateY(0);
+        }
+        .modal-icon { font-size: 3.5rem; margin-bottom: 15px; }
+        .modal-title { font-size: 1.5rem; font-weight: 800; margin: 0 0 10px 0; color: #333; }
+        .modal-text { color: #555; margin-bottom: 25px; font-size: 1.05rem; font-weight: 500; }
+        .modal-actions { display: flex; gap: 15px; justify-content: center; }
+        .modal-btn { 
+            padding: 12px 25px; border: none; border-radius: 12px; font-weight: bold; 
+            cursor: pointer; transition: 0.2s; font-size: 1rem; color: white; flex: 1;
+        }
+        .btn-cancel { background: #6c757d; }
+        .btn-confirm { background: var(--psa-blue); }
+        .modal-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+    <div class="header-nav">
+        <div class="logo-section">
+            <i><img src="/res/PSA.png" alt="PSA Logo" height="90" class="mb-1"></i>
+            <div class="title-text">
+                <h1>Philippine Statistics Authority</h1>
+                <p>Civil Registration Dashboard</p>
+                    <div id="controllerUserInfo" class="user-meta">Loading user...</div>
+            </div>
+        </div>
+        <a href="#" onclick="handleExit(event)" style="color: var(--psa-red); text-decoration: none; font-weight: bold;">
+            EXIT MENU <i class="fas fa-sign-out-alt ml-2"></i>
+        </a>
+    </div>
+
+    <div class="content-grid">
+        <div class="controller-panel">
+            <div class="window-badge">PRIORITY WINDOW</div>
+            <div class="serving-label">Now Serving</div>
+            <div class="ticket-display" id="current-ticket">----</div>
+            
+            <div class="control-btns">
+                <button class="action-btn btn-terminate" onclick="terminateCurrent()">
+                    <i class="fas fa-times-circle"></i>
+                    <span>Terminated</span>
+                </button>
+                <button class="action-btn btn-complete" onclick="completeCurrent()">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Completed</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="tickets-panel">
+            <div class="queue-title">NEW TICKETS</div>
+            <div class="ticket-scroll" id="queue-items">
+                <div class="empty-queue-msg">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>No pending tickets.<br>New registrations will appear here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module">
+        import { initControllerSession } from '/controller-auth.js';
+        initControllerSession({
+            elementId: 'controllerUserInfo',
+            pageLocation: 'Civil Registration - PRIORITY WINDOW'
+        });
+    </script>
+    <script>
+        const socket = io();
+        let currentServingTicket = null;
+
+        function renderControllerState(state) {
+            const civilState = state?.currentServing?.civil || {};
+            currentServingTicket = civilState.priorityWindow || null;
+            updateTicketDisplay(currentServingTicket);
+            renderWaitList(state?.waitingQueue?.civil || []);
+        }
+
+        function updateTicketDisplay(ticket) {
+            document.getElementById('current-ticket').innerText = ticket?.label || '----';
+        }
+
+        function renderWaitList(tickets) {
+            const container = document.getElementById('queue-items');
+            const pending = tickets.filter(ticket => ticket.isPriority === true || ticket.isPriority === 'true');
+            if (!pending.length) {
+                container.innerHTML = `
+                    <div class="empty-queue-msg">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>No pending tickets.<br>New registrations will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = pending.map(ticket => {
+                const assignButton = !currentServingTicket ? `<button class="assign-btn" onclick="selectTicket('${ticket.id}')">Assign Ticket</button>` : '';
+                return `
+                    <div class="ticket-card">
+                        <div class="ticket-label">${ticket.label}</div>
+                        <div class="ticket-meta">Priority queue</div>
+                        <div class="assign-actions">${assignButton}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectTicket(ticketId) {
+            if (currentServingTicket) return;
+            socket.emit('assign_ticket', {
+                dept: 'civil',
+                window: 'priorityWindow',
+                ticketId
+            });
+        }
+
+        function completeCurrent() {
+            if (!currentServingTicket) return;
+            showConfirmModal('complete', () => {
+                socket.emit('complete_ticket', {
+                    dept: 'civil',
+                    window: 'priorityWindow'
+                });
+            });
+        }
+
+        function terminateCurrent() {
+            if (!currentServingTicket) return;
+            showConfirmModal('terminate', () => {
+                socket.emit('terminate_ticket', {
+                    dept: 'civil',
+                    window: 'priorityWindow'
+                });
+            });
+        }
+
+        // --- Confirmation Modal Logic ---
+        function showConfirmModal(type, onConfirm) {
+            let overlay = document.getElementById('custom-modal');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'custom-modal';
+                overlay.className = 'modal-overlay';
+                overlay.innerHTML = `
+                    <div class="modal-box">
+                        <i id="modal-icon" class="modal-icon"></i>
+                        <h2 id="modal-title" class="modal-title">Confirm</h2>
+                        <p id="modal-text" class="modal-text">Are you sure?</p>
+                        <div class="modal-actions">
+                            <button class="modal-btn btn-cancel" onclick="closeConfirmModal()">Cancel</button>
+                            <button id="modal-confirm-btn" class="modal-btn btn-confirm">Confirm</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            }
+
+            const titleObj = document.getElementById('modal-title');
+            const textObj = document.getElementById('modal-text');
+            const iconObj = document.getElementById('modal-icon');
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+
+            if (type === 'exit') {
+                titleObj.innerText = 'Exit Menu';
+                textObj.innerText = 'Are you sure you want to leave the queue control dashboard?';
+                iconObj.className = 'fas fa-sign-out-alt modal-icon';
+                iconObj.style.color = 'var(--psa-red)';
+                confirmBtn.style.background = 'var(--psa-red)';
+            } else if (type === 'complete') {
+                titleObj.innerText = 'Complete Ticket';
+                textObj.innerText = 'Mark the currently serving ticket as Completed?';
+                iconObj.className = 'fas fa-check-circle modal-icon';
+                iconObj.style.color = 'var(--psa-green)';
+                confirmBtn.style.background = 'var(--psa-green)';
+            } else if (type === 'terminate') {
+                titleObj.innerText = 'Terminate Ticket';
+                textObj.innerText = 'Are you sure you want to mark this ticket as Terminated?';
+                iconObj.className = 'fas fa-times-circle modal-icon';
+                iconObj.style.color = 'var(--psa-red)';
+                confirmBtn.style.background = 'var(--psa-red)';
+            }
+
+            confirmBtn.onclick = () => {
+                closeConfirmModal();
+                onConfirm();
+            };
+
+            overlay.classList.add('active');
+        }
+
+        function closeConfirmModal() {
+            const overlay = document.getElementById('custom-modal');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        function handleExit(event) {
+            event.preventDefault();
+            showConfirmModal('exit', () => {
+                window.location.href = '/queue-control.html';
+            });
+        }
+
+        socket.on('queue_update', renderControllerState);
+        socket.on('connect', () => socket.emit('request_queue_update'));
+    </script>
+</body>
+</html>

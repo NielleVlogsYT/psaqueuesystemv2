@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>PSA Professional Queue Display</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --psa-blue: #0038a8;
+            --psa-gold: #fcd116;
+            --priority-green: #28a745;
+            --dark-bg: #f7f7f7;
+        }
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--dark-bg);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: white;
+        }
+
+        /* Background Graphics */
+        .landscape-wrapper {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            background: radial-gradient(circle at top right, #93a8d1 0%, #cbcbcb 100%);
+        }
+
+        /* Header Area */
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 20px;
+            margin-bottom: 15px;
+        }
+
+        .clock-display {
+            font-size: 2rem;
+            font-weight: 500;
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        /* Service Section */
+        .service-row {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Panel Styling */
+        .glass-panel {
+            background: rgba(53, 46, 46, 0.566);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgb(0, 0, 0);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .serving-main { flex: 3; padding: 20px; }
+        .waiting-sidebar { flex: 1px; padding: 20px; background: rgba(0, 0, 0, 0.3); }
+
+        /* Typography */
+        .dept-tag {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 5px 15px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        .tag-nid { background: var(--psa-blue); color: white; }
+        .tag-civ { background: var(--priority-green); color: white; }
+
+        .window-card {
+            background: rgba(61, 60, 60, 0.468);
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-bottom: 4px solid transparent;
+        }
+        
+        .window-card.active-blue { border-color: #007bff; }
+        .window-card.active-green { border-color: var(--priority-green); }
+
+        .win-title {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.716);
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .ticket-number {
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 1;
+            margin: 10px 0;
+            text-shadow: 0 0 30px rgba(255,255,255,0.2);
+            font-family: 'Courier New', monospace;
+        }
+
+        .active-blue .ticket-number { color: #5cb8ff; text-shadow: 0 0 20px rgba(0,123,255,0.5); }
+        .active-green .ticket-number { color: #7dff9a; text-shadow: 0 0 20px rgba(40,167,69,0.5); }
+
+        /* Waiting List Items */
+        .waiting-header {
+            font-size: 1rem;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.999);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .token-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .token-pill {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 1.3rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .token-pill.prio {
+            color: #7dff9a;
+            border-color: rgba(40,167,69,0.4);
+        }
+
+        /* Animation for a new number */
+        @keyframes pulse-new {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .new-call { animation: pulse-new 1s infinite; }
+
+    </style>
+</head>
+<body>
+
+<div class="landscape-wrapper">
+    <div class="main-header">
+        <div>
+            <h2 style="color: var(--psa-gold); margin: 0; font-weight: bold"> <img src="/res/PSA.png" alt="PSA Logo" height="90" class="mb-1"><span style="color: var(--psa-blue)">Philippine Statistics Authority</span> Queue</h2>
+            
+        </div>
+        <div class="clock-display" id="realtime-clock">00:00:00 PM</div>
+    </div>
+
+    <div class="service-row">
+        <div class="glass-panel serving-main">
+            <div class="dept-tag tag-nid">National ID</div>
+            <div class="d-flex gap-3 h-100" style="gap: 10px;">
+                <div class="window-card active-blue">
+                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 1</div>
+                    <div class="ticket-number" id="nid-w1">---</div>
+                </div>
+                <div class="window-card active-blue">
+                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 2</div>
+                    <div class="ticket-number" id="nid-w2">---</div>
+                </div>
+                <div class="window-card active-green">
+                    <div class="win-title text-success"><i class="fas fa-star mr-2"></i> Priority</div>
+                    <div class="ticket-number" id="nid-prio">---</div>
+                </div>
+            </div>
+        </div>
+        <div class="glass-panel waiting-sidebar">
+            <div class="waiting-header">National ID Waiting Queue</div>
+            <div class="token-container" id="wait-nid"></div>
+        </div>
+    </div>
+
+    <div class="service-row">
+        <div class="glass-panel serving-main">
+            <div class="dept-tag tag-civ">Civil Registration</div>
+            <div class="d-flex gap-3 h-100" style="gap: 20px;">
+                <div class="window-card active-blue">
+                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Regular Lane</div>
+                    <div class="ticket-number" id="civ-reg">---</div>
+                </div>
+                <div class="window-card active-green">
+                    <div class="win-title text-success"><i class="fas fa-star mr-2"></i> Priority Lane</div>
+                    <div class="ticket-number" id="civ-prio">---</div>
+                </div>
+            </div>
+        </div>
+        <div class="glass-panel waiting-sidebar">
+            <div class="waiting-header">Civil Registration Waiting Queue</div>
+            <div class="token-container" id="wait-civ"></div>
+        </div>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    function updateTime() {
+        const now = new Date();
+        document.getElementById('realtime-clock').innerText = now.toLocaleTimeString();
+    }
+    setInterval(updateTime, 1000);
+
+    function renderQueueState(state) {
+        const serving = state?.currentServing || {};
+        const waiting = state?.waitingQueue || { national: [], civil: [] };
+
+        updateNumber('nid-w1', serving.national?.window1?.label);
+        updateNumber('nid-w2', serving.national?.window2?.label);
+        updateNumber('nid-prio', serving.national?.priorityWindow?.label);
+        updateNumber('civ-reg', serving.civil?.window1?.label);
+        updateNumber('civ-prio', serving.civil?.priorityWindow?.label);
+
+        const nationalQueueLimited = waiting.national.slice(0, 4);
+        const civilQueueLimited = waiting.civil.slice(0, 4);
+        renderWait('wait-nid', nationalQueueLimited, waiting.national.length);
+        renderWait('wait-civ', civilQueueLimited, waiting.civil.length);
+    }
+
+    function updateNumber(id, val) {
+        const el = document.getElementById(id);
+        const newVal = val || '---';
+        if (el.innerText !== newVal && newVal !== '---') {
+            el.classList.add('new-call');
+            setTimeout(() => el.classList.remove('new-call'), 5000);
+        }
+        el.innerText = newVal;
+    }
+
+    function renderWait(id, list, totalCount = 0) {
+        const container = document.getElementById(id);
+        if (!Array.isArray(list) || list.length === 0) {
+            container.innerHTML = '<div class="token-pill">No pending tickets</div>';
+            return;
+        }
+
+        container.innerHTML = list.map(t => 
+            `<div class="token-pill ${t.isPriority ? 'prio' : ''}">${t.label}</div>`
+        ).join('');
+
+        if (totalCount > list.length) {
+            const moreCount = totalCount - list.length;
+            container.innerHTML += `<div class="token-pill">+${moreCount} more waiting</div>`;
+        }
+    }
+
+    socket.on('queue_update', renderQueueState);
+    socket.on('connect', () => socket.emit('request_queue_update'));
+
+    updateTime();
+</script>
+
+</body>
+</html>

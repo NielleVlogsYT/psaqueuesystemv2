@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Queue - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <style>
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(1, 61, 129, 0.25), rgba(7, 112, 233, 0.25)), url('./res/Philippine-Statistics-Authority-PSA.png') center / cover fixed; color: #1f2a3a;  animation: slideFadeIn 0.6s ease-out forwards;
+}
+
+@keyframes slideFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px); /* Starts 20px below its normal position */
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0); /* Ends at its normal position */
+    }
+}
+        .layout-wrapper { display: flex; width: 100%; height: 100vh; padding: 40px 60px; position: relative; }
+        .brand-section { flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 2; }
+        .brand-title { color: #1a428a; font-size: 6.5rem; font-weight: 900; line-height: 0.95; letter-spacing: -3px; margin-bottom: 10px; text-shadow: 2px 2px 10px rgba(255,255,255,0.2); }
+        .brand-subtitle { color: #ffffff; font-size: 2.2rem; font-weight: 400; letter-spacing: -0.5px; }
+        .footer-info { position: absolute; bottom: 30px; left: 60px; width: calc(100% - 120px); z-index: 2; }
+        .footer-info hr { border: none; border-top: 2px solid rgba(50, 50, 50, 0.6); margin-bottom: 15px; }
+        .footer-info p { color: #ffffff; font-size: 1.05rem; max-width: 800px; line-height: 1.4; }
+        .login-section { flex: 1; display: flex; align-items: center; justify-content: flex-end; z-index: 2; padding-right: 40px; }
+        .login-card { background: #ffffff; width: 100%; max-width: 400px; padding: 50px 40px; border-radius: 25px; border: 2px solid #111; box-shadow: 0 25px 50px rgba(0,0,0,0.15); text-align: center; }
+        .login-card h2 { color: #222; font-weight: 300; font-size: 2.2rem; margin-bottom: 40px; letter-spacing: -1px; }
+        .input-group { margin-bottom: 20px; text-align: center; }
+        .input-group input, .input-group select { width: 100%; padding: 16px 24px; border: 2px solid #888; border-radius: 50px; font-size: 1rem; font-family: inherit; transition: 0.3s; background: white; }
+        .input-group input:focus, .input-group select:focus { border-color: #3399aa; outline: none; }
+        .forgot-link { display: block; font-size: 0.75rem; color: #666; text-decoration: none; margin-top: -10px; margin-bottom: 30px; cursor: pointer; }
+        .forgot-link:hover { text-decoration: underline; }
+        .btn-login { width: 70%; padding: 14px; background: #369baf; color: #ffffff; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 800; cursor: pointer; transition: 0.2s; margin: 0 auto; display: block; }
+        .btn-login:hover { background: #2a7a8a; transform: translateY(-2px); }
+        .status-msg { color: #dc3545; font-size: 0.9rem; margin-top: 15px; font-weight: 700; min-height: 20px; }
+        .toggle-text { margin-top: 25px; font-size: 0.85rem; color: #888; }
+        .toggle-text a { color: #369baf; font-weight: 600; text-decoration: none; cursor: pointer; }
+        #signupForm { display: none; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #ffffff; border-radius: 20px; padding: 40px; max-width: 420px; width: 90%; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3); border: 2px solid #111; }
+        .modal-content h3 { color: #1a428a; font-size: 1.8rem; margin-bottom: 10px; font-weight: 700; }
+        .modal-content p { color: #666; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5; }
+        .modal-step { display: none; }
+        .modal-step.active { display: block; }
+        .modal-input { width: 100%; padding: 14px 20px; border: 2px solid #888; border-radius: 15px; font-size: 1rem; font-family: inherit; margin-bottom: 15px; transition: 0.3s; }
+        .modal-input:focus { border-color: #3399aa; outline: none; box-shadow: 0 0 0 3px rgba(51, 153, 170, 0.1); }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 15px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .modal-btn.primary {  background: #369baf; color: #ffffff; }
+        .modal-btn.primary:hover { background: #2a7a8a; transform: translateY(-2px); }
+        .modal-btn.secondary { background: #e0e0e0; color: #333; }
+        .modal-btn.secondary:hover { background: #d0d0d0; }
+        .modal-status { color: #dc3545; font-size: 0.85rem; margin-top: 10px; font-weight: 700; min-height: 18px; }
+        .modal-status.success { color: #28a745;  }
+        @media (max-width: 768px) { .layout-wrapper { flex-direction: column; padding: 20px; } .login-section { justify-content: center; padding-right: 0; margin-top: 40px; } .brand-section, .footer-info { text-align: center; left: 0; width: 100%; position: relative; } }
+        
+    </style>
+</head>
+<body>
+    <div id="forgotPasswordModal" class="modal-overlay">
+        <div class="modal-content">
+            
+            <div id="forgotStep1" class="modal-step active">
+                <h3>Forgot Password</h3>
+                <p>Enter your email address to receive a verification code.</p>
+                <input type="text" id="forgotEmail" class="modal-input" placeholder="Email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false">
+                <div id="forgotStep1Status" class="modal-status"></div>
+                <div class="modal-buttons">         
+                    <button id="btnSendCode" class="modal-btn primary">Send Code</button>
+                    <button id="btnCancelStep1" class="modal-btn secondary">Cancel</button>
+                </div>
+            </div>
+
+            <div id="forgotStepConfirmation" class="modal-step">
+    <h3 style="color: #28a745;">✓ Reset Email Sent</h3>
+    <p>A password reset link has been sent to your email address. Please check your inbox and spam folder to reset your password.</p>
+    <div class="modal-buttons">
+        <button id="btnCloseConfirmation" class="modal-btn primary" style="flex: 1;">Close & Return to Login</button>
+    </div>
+</div>
+
+
+            <div id="forgotStep2" class="modal-step">
+                <h3>Verify Code</h3>
+                <p>Enter the 6-digit code sent to your email.</p>
+                <input type="text" id="verificationCode" class="modal-input" placeholder="Enter 6-digit code" maxlength="6">
+                <div id="forgotStep2Status" class="modal-status"></div>
+                <div class="modal-buttons">
+                    <button id="btnVerifyCode" class="modal-btn primary">Verify Code</button>
+                    <button id="btnCancelStep2" class="modal-btn secondary">Cancel</button>
+                </div>
+            </div>
+
+            <div id="forgotStep3" class="modal-step">
+                <h3>Create New Password</h3>
+                <p>Enter your new password.</p>
+                <div style="position: relative; margin-bottom: 15px;">
+                    <input type="password" id="newPassword" class="modal-input" placeholder="New Password (Min 8 chars, 1 uppercase, 1 number, 1 special)" style="padding-right: 40px; margin-bottom: 0;">
+                    <i class="fas fa-eye toggle-password" data-target="newPassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b;"></i>
+                </div>
+                <div style="position: relative; margin-bottom: 15px;">
+                    <input type="password" id="confirmPassword" class="modal-input" placeholder="Confirm Password" style="padding-right: 40px; margin-bottom: 0;">
+                    <i class="fas fa-eye toggle-password" data-target="confirmPassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b;"></i>
+                </div>
+                <div id="forgotStep3Status" class="modal-status"></div>
+                <div class="modal-buttons">
+                    <button id="btnUpdatePassword" class="modal-btn primary">Update Password</button>
+                    <button id="btnCancelStep3" class="modal-btn secondary">Cancel</button>
+                </div>
+            </div>
+
+            <div id="forgotStep4" class="modal-step">
+                <h3 style="color: #28a745;">✓ Password Reset</h3>
+                <p>Your password has been successfully updated. You can now log in with your new password.</p>
+                <div class="modal-buttons">
+                 
+                    <button id="btnCloseModal" class="modal-btn primary" style="flex: 1;">Back to Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Success Modal -->
+    <div id="loginSuccessModal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <h3 style="color: #28a745; font-size: 2rem; margin-bottom: 15px;">
+                <i class="fas fa-check-circle"></i> Success
+            </h3>
+            <p style="font-size: 1.1rem; color: #333; margin-bottom: 0;">Account successfully logged in.</p>
+            <p style="font-size: 0.85rem; color: #888; margin-top: 20px;">Redirecting to dashboard...</p>
+        </div>
+    </div>
+
+    <div class="layout-wrapper">
+        <div class="brand-section">
+            <h1 class="brand-title">Philippine<br>Statistics<br>Authority</h1>
+            <h2 class="brand-subtitle">Queueing System</h2>
+        </div>
+        <div class="login-section">
+            <div class="login-card">
+                <div id="loginForm">
+                    <h2>Login</h2>
+                    <form id="loginFormSubmit" novalidate>
+                        <div class="input-group"><input type="text" id="loginEmail" required placeholder="Email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false"></div>
+                        <div class="input-group"><input type="password" id="loginPass" required placeholder="Password" autocomplete="current-password"></div>
+                        <a href="#" id="linkForgot" class="forgot-link">Forgot Password?</a>
+                        <button type="submit" id="btnLogin" class="btn-login">Login</button>
+                    </form>
+                    <div id="loginStatus" class="status-msg"></div>
+                    <div class="toggle-text"><a id="linkToSignup">System Registration</a></div>
+                </div>
+                
+                <div id="signupForm">
+                    <h2>Register</h2>
+                    <div class="input-group"><input type="text" id="signEmail" required placeholder="Email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false"></div>
+                    <div class="input-group" style="position: relative;">
+                        <input type="password" id="signPass" required placeholder="Password (Min 8 chars, 1 uppercase, 1 number, 1 special)" style="padding-right: 45px;">
+                        <i class="fas fa-eye toggle-password" data-target="signPass" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b;"></i>
+                    </div>
+                    <div class="input-group">
+                        <select id="signRole" required>
+                            <option value="controller">Queue Staff</option>
+                            <option value="admin">System Admin</option>
+                        </select>
+                    </div>
+                    
+                    <button id="btnSignup" class="btn-login" style="background:#1a428a;">Create Account</button>
+                    
+                    <div id="otpContainer" style="display: none; margin-top: 15px;">
+                        <p style="font-size: 0.8rem; color: #e67e22; margin-bottom: 10px; font-weight: bold;">Admin authorization required. Check server logs for OTP.</p>
+                        <div class="input-group"><input type="text" id="adminOtp" placeholder="Enter 6-digit OTP"></div>
+                        <button id="btnVerifySignup" class="btn-login" style="background:#e67e22;">Verify & Register</button>
+                    </div>
+
+                    <div id="signupStatus" class="status-msg"></div>
+                    <div class="toggle-text"><a id="linkToLogin">Back to Login</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-info">
+        <hr>
+        <p>We provide statistics, civil registration, and identification services for sustainable, innovative, and inclusive development.</p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
+            authDomain: "queue-project-login.firebaseapp.com",
+            projectId: "queue-project-login",
+            storageBucket: "queue-project-login.firebasestorage.app",
+            messagingSenderId: "869956656004",
+            appId: "1:869956656004:web:3d2a98bea880c701605bd1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+        }
+
+        function validatePassword(password) {
+            if (password.length < 8) return "Password must be at least 8 characters long.";
+            if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+            if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter.";
+            if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return "Password must contain at least one special character.";
+            return null;
+        }
+
+        async function logAuthActivity(action, email) {
+            try {
+                await fetch('/api/log-auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: action, email: email })
+                });
+            } catch (error) {
+                console.error("Could not record log:", error);
+            }
+        }
+
+        document.getElementById('linkToSignup').addEventListener('click', (e) => {
+            e.preventDefault(); 
+            document.getElementById('loginForm').style.display = 'none'; 
+            document.getElementById('signupForm').style.display = 'block'; 
+            document.getElementById('loginStatus').innerText = '';
+            resetSignupUI();
+        });
+        
+        document.getElementById('linkToLogin').addEventListener('click', (e) => {
+            e.preventDefault(); 
+            document.getElementById('signupForm').style.display = 'none'; 
+            document.getElementById('loginForm').style.display = 'block'; 
+            document.getElementById('signupStatus').innerText = '';
+        });
+
+        function resetSignupUI() {
+            document.getElementById('btnSignup').style.display = 'block';
+            document.getElementById('otpContainer').style.display = 'none';
+            document.getElementById('adminOtp').value = '';
+            document.getElementById('signupStatus').innerText = '';
+        }
+
+        document.getElementById('btnSignup').addEventListener('click', async () => {
+            const email = document.getElementById('signEmail').value;
+            const pass = document.getElementById('signPass').value;
+            const role = document.getElementById('signRole').value;
+            const status = document.getElementById('signupStatus');
+            
+            if (!email || !pass) return status.innerText = "Please fill in all fields.";
+            if (!isValidEmail(email)) return status.innerText = "Please enter a valid email address.";
+
+            const passError = validatePassword(pass);
+            if (passError) return status.innerText = passError;
+
+            if (role === 'admin') {
+                status.innerText = "Requesting Admin Authorization...";
+                try {
+                    await fetch('/api/request-admin-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    document.getElementById('btnSignup').style.display = 'none';
+                    document.getElementById('otpContainer').style.display = 'block';
+                    status.innerText = "";
+                } catch (err) {
+                    status.innerText = "Failed to request OTP.";
+                }
+                return; 
+            }
+
+            executeSignup(email, pass, role);
+        });
+
+        document.getElementById('btnVerifySignup').addEventListener('click', async () => {
+            const email = document.getElementById('signEmail').value;
+            const pass = document.getElementById('signPass').value;
+            const role = document.getElementById('signRole').value;
+            const otp = document.getElementById('adminOtp').value;
+            const status = document.getElementById('signupStatus');
+
+            if (!otp) return status.innerText = "Please enter the OTP.";
+
+            status.innerText = "Verifying OTP...";
+            try {
+                const response = await fetch('/api/verify-admin-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    executeSignup(email, pass, role);
+                } else {
+                    status.innerText = data.error || "Invalid OTP.";
+                }
+            } catch (err) {
+                status.innerText = "Verification failed.";
+            }
+        });
+
+        function executeSignup(email, pass, role) {
+            const status = document.getElementById('signupStatus');
+            status.innerText = "Creating account...";
+            
+            createUserWithEmailAndPassword(auth, email, pass).then(async (cred) => {
+                const registeredEmail = cred.user.email || email;
+                await fetch('/api/set-role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: registeredEmail, role }) });
+                await logAuthActivity('NEW_REGISTRATION', email);
+                
+                alert(`${role.toUpperCase()} account created successfully! You can now log in.`);
+                
+                document.getElementById('signEmail').value = '';
+                document.getElementById('signPass').value = '';
+                resetSignupUI();
+                document.getElementById('linkToLogin').click(); 
+            }).catch((error) => status.innerText = error.message.replace("Firebase: ", ""));
+        }
+
+                        async function attemptLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const status = document.getElementById('loginStatus');
+            const btnLogin = document.getElementById('btnLogin');
+            if (!email || !pass) return status.innerText = "Please fill in all fields.";
+
+            btnLogin.disabled = true;
+            status.innerText = '';
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+                const userEmail = userCredential.user.email;
+                const response = await fetch('/api/get-role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userEmail }) });
+                const data = await response.json();
+
+                if (data.role === 'banned') {
+                    await signOut(auth);
+                    status.innerText = "This account has been removed by an Admin.";
+                    btnLogin.disabled = false;
+                    return;
+                }
+
+                await logAuthActivity('USER_LOGIN', userEmail);
+
+                localStorage.setItem('psa_admin_token', userEmail);
+                localStorage.setItem('psa_role', data.role);
+                const targetUrl = data.role === 'admin' ? "admin_dashboard.html" : "queue-control.html";
+                
+                // Show the success modal
+                document.getElementById('loginSuccessModal').classList.add('active');
+
+                // Auto-close and redirect after 2 seconds (2000 milliseconds)
+                setTimeout(() => {
+                    const transitionLink = document.createElement('a');
+                    transitionLink.href = targetUrl;
+                    document.body.appendChild(transitionLink);
+                    transitionLink.click();
+                }, 2000);
+
+            } catch (error) {
+                // Better error handling for the user
+                status.innerText = "Invalid email or password.";
+                btnLogin.disabled = false;
+            }
+        }
+
+
+        document.getElementById('loginFormSubmit').addEventListener('submit', (e) => {
+            e.preventDefault();
+            attemptLogin();
+        });
+
+        document.getElementById('loginEmail').addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const status = document.getElementById('loginStatus');
+            if (!email) {
+                status.innerText = "Please enter your email.";
+                return;
+            }
+            if (!isValidEmail(email)) {
+                status.innerText = "Please enter a valid email address.";
+                return;
+            }
+            status.innerText = '';
+            if (pass) {
+                attemptLogin();
+            } else {
+                document.getElementById('loginPass').focus();
+            }
+        });
+        document.getElementById('loginPass').addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            attemptLogin();
+        });
+
+        document.getElementById('btnLogin').addEventListener('click', () => attemptLogin());
+ 
+        // All code below is NEW and handles the 4-step password reset flow
+
+        // Modal references
+        const forgotModal = document.getElementById('forgotPasswordModal');
+        const forgotStep1 = document.getElementById('forgotStep1');
+        const forgotStep2 = document.getElementById('forgotStep2');
+        const forgotStep3 = document.getElementById('forgotStep3');
+        const forgotStep4 = document.getElementById('forgotStep4');
+        let resetEmail = ''; // Stores email throughout the reset process
+
+        // Opens modal and shows it
+        function openForgotModal() {
+            forgotModal.classList.add('active');
+        }
+
+        // Closes modal and resets all fields
+        function closeForgotModal() {
+            forgotModal.classList.remove('active');
+            resetForgotModal();
+        }
+
+        // Clears all form fields and status messages
+        function resetForgotModal() {
+            forgotStep1.classList.add('active');
+    forgotStep2.classList.remove('active');
+    forgotStep3.classList.remove('active');
+    forgotStep4.classList.remove('active');
+    
+    const confirmStep = document.getElementById('forgotStepConfirmation');
+    if (confirmStep) confirmStep.classList.remove('active');
+
+    document.getElementById('forgotEmail').value = '';
+    document.getElementById('verificationCode').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+    document.getElementById('forgotStep1Status').innerText = '';
+    document.getElementById('forgotStep2Status').innerText = '';
+    document.getElementById('forgotStep3Status').innerText = '';
+    resetEmail = '';
+        }
+
+        function goToStep2() {
+            forgotStep1.classList.remove('active');
+            forgotStep2.classList.add('active');
+        }
+
+        function goToStep3() {
+            forgotStep2.classList.remove('active');
+            forgotStep3.classList.add('active');
+        }
+
+        function goToStep4() {
+            forgotStep3.classList.remove('active');
+            forgotStep4.classList.add('active');
+        }
+
+        // Previously: Just sent Firebase reset email
+        // Now: Opens modal, requires email to be entered in login form first
+        document.getElementById('linkForgot').addEventListener('click', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            
+            // REQUIREMENT
+            if (!email) {
+                document.getElementById('loginStatus').innerText = "Please enter your email first.";
+                return;
+            }
+            
+            // Pre-fill modal with email from login form
+            document.getElementById('forgotEmail').value = email;
+            openForgotModal();
+        });
+
+        // Send Verification Code
+        // NEW BACKEND API NEEDED: /api/send-reset-code
+        document.getElementById('btnSendCode').addEventListener('click', async () => {
+    const email = document.getElementById('forgotEmail').value;
+    const status = document.getElementById('forgotStep1Status');
+
+    if (!email) {
+        status.innerText = "Please enter your email.";
+        return;
+    }
+
+    status.classList.remove('success');
+    status.innerText = "Sending password reset email...";
+    
+    try {
+        // Use Firebase's built-in password reset function
+        await sendPasswordResetEmail(auth, email);
+        
+        // Hide Step 1 and show the new Confirmation Window
+        document.getElementById('forgotStep1').classList.remove('active');
+        document.getElementById('forgotStepConfirmation').classList.add('active');
+        
+    } catch (error) {
+        status.classList.remove('success');
+        // Clean up the Firebase error message for the user
+        status.innerText = error.message.replace("Firebase: ", "");
+    }
+});
+
+// Bind the new close button
+document.getElementById('btnCloseConfirmation').addEventListener('click', closeForgotModal);
+
+
+
+        // ===== STEP 2: Verify 6-Digit Code =====
+        // NEW BACKEND API NEEDED: /api/verify-reset-code
+        document.getElementById('btnVerifyCode').addEventListener('click', async () => {
+            const code = document.getElementById('verificationCode').value;
+            const status = document.getElementById('forgotStep2Status');
+
+            if (!code) return status.innerText = "Please enter the code.";
+            // Validate: must be exactly 6 digits
+            if (code.length !== 6 || isNaN(code)) return status.innerText = "Code must be 6 digits.";
+
+            status.innerText = "Verifying code...";
+            try {
+                // Call backend to verify code
+                const response = await fetch('/api/verify-reset-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: resetEmail, code })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    status.innerText = "";
+                    status.classList.add('success');
+                    // Move to step 3 after short delay
+                    setTimeout(() => goToStep3(), 500);
+                } else {
+                    status.classList.remove('success');
+                    status.innerText = data.error || "Invalid code.";
+                }
+            } catch (error) {
+                status.classList.remove('success');
+                status.innerText = "Verification failed.";
+            }
+        });
+
+        // Update Password 
+        // NEW BACKEND API NEEDED: /api/reset-password
+        document.getElementById('btnUpdatePassword').addEventListener('click', async () => {
+            const newPass = document.getElementById('newPassword').value;
+            const confirmPass = document.getElementById('confirmPassword').value;
+            const status = document.getElementById('forgotStep3Status');
+
+            // Validation: all fields required
+            if (!newPass || !confirmPass) return status.innerText = "Please fill in all fields.";
+            
+            const passError = validatePassword(newPass);
+            if (passError) return status.innerText = passError;
+            // Validation: passwords must match
+            if (newPass !== confirmPass) return status.innerText = "Passwords do not match.";
+
+            status.innerText = "Updating password...";
+            try {
+                // Call backend to update password in database
+                const response = await fetch('/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: resetEmail, newPassword: newPass })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Log the password reset activity
+                    await logAuthActivity('PASSWORD_RESET', resetEmail);
+                    status.innerText = "";
+                    // Move to success step
+                    goToStep4();
+                } else {
+                    status.classList.remove('success');
+                    status.innerText = data.error || "Error updating password.";
+                }
+            } catch (error) {
+                status.innerText = "Error updating password.";
+            }
+        });
+      
+        // All cancel/close buttons use the same function
+        document.getElementById('btnCancelStep1').addEventListener('click', closeForgotModal);
+        document.getElementById('btnCancelStep2').addEventListener('click', closeForgotModal);
+        document.getElementById('btnCancelStep3').addEventListener('click', closeForgotModal);
+        document.getElementById('btnCloseModal').addEventListener('click', closeForgotModal);
+        
+        // Clicking on dark overlay (outside modal) also closes it
+        forgotModal.addEventListener('click', (e) => {
+            if (e.target === forgotModal) closeForgotModal();
+        });
+
+        document.querySelectorAll('.toggle-password').forEach(icon => {
+            icon.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    this.classList.remove('fa-eye');
+                    this.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    this.classList.remove('fa-eye-slash');
+                    this.classList.add('fa-eye');
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>

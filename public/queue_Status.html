@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <title>PSA Professional Queue Display</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+        <style>
+
+            :root { --bg-glass: rgba(25, 35, 60, 0.55); --border-glass: rgba(255, 255, 255, 0.25); --radius-lg: 30px; --radius-md: 20px; --text-light: #f8f9fa; --psa-gold: #ffd700; --glow-blue: rgba(0, 123, 255, 0.6); --glow-green: rgba(40, 167, 69, 0.6); }
+
+            body, html { height: 100%; margin: 0; overflow-x: hidden; overflow-y: auto; font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: var(--text-light); }
+
+            /* Glassmorphism Background */
+
+            .landscape-wrapper { min-height: 100vh; display: flex; flex-direction: column; padding: 20px; background: linear-gradient(135deg, rgba(10, 25, 60, 0.85), rgba(15, 45, 90, 0.85)), url('./res/PSA-BG.png') center/cover fixed;  background-blend-mode: overlay; }
+
+            /* Header Area */
+
+            .main-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; margin-bottom: 20px; background: var(--bg-glass) !important; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-glass) !important; border-radius: var(--radius-lg); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); }
+            .header-title-container { display: flex; flex-direction: column; justify-content: center; }
+            .main-header h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-weight: 900; line-height: 1.2; margin: 0; color: var(--text-light); letter-spacing: 1px; }
+            .main-header h2 span.highlight { color: var(--psa-gold); text-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+            .main-header h6 { font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: 600; color: #adb5bd; margin: 0; letter-spacing: 0.5px; }
+            .clock-container { text-align: right; }
+            .clock-display { font-family: 'Segoe UI', sans-serif; font-size: clamp(1.5rem, 2.5vw, 2.2rem); font-weight: 800; color: var(--psa-gold); text-shadow: 0 0 15px rgba(255, 215, 0, 0.2); line-height: 1; }
+            .date-display { font-size: clamp(0.8rem, 1.2vw, 1.1rem); font-weight: 600; color: #ced4da; margin-top: 5px; }
+            
+            /* Service Section */
+
+            .service-row { flex: 1; display: flex; flex-wrap: wrap; gap: clamp(10px, 2vw, 20px); margin-bottom: 20px; min-height: 0; }
+
+            /* Glass Panels */
+
+            .glass-panel { background: var(--bg-glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-glass); border-radius: var(--radius-md); display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3); overflow: hidden; }
+            .serving-main { flex: 3; min-width: 300px; padding: clamp(15px, 3vw, 25px); }
+            .waiting-sidebar { flex: 1; min-width: 250px; padding: clamp(12px, 2vw, 20px); background: rgba(0, 0, 0, 0.2); }
+
+            /* Typography & Tags */
+
+            .dept-tag { font-size: clamp(1rem, 1.8vw, 1.3rem); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 8px 25px; border-radius: 12px; display: inline-block; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); }
+            .tag-nid { background: linear-gradient(135deg, #0056b3, #0033a0); color: white; }
+            .tag-civ { background: linear-gradient(135deg, #218838, #1e7e34); color: white; }
+
+            /* Window Cards */
+
+            .window-card { background: rgba(255, 255, 255, 0.05); border-radius: var(--radius-md); padding: clamp(10px, 2vw, 20px); text-align: center; flex: 1;display: flex; flex-direction: column; justify-content: center; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02); transition: all 0.3s ease; }
+            .window-card.active-blue { border-bottom: 4px solid #007bff; }
+            .window-card.active-green { border-bottom: 4px solid #28a745; }
+            .win-title { font-size: clamp(0.85rem, 1.5vw, 1.1rem); color: #ced4da; text-transform: uppercase; font-weight: 800; letter-spacing: 1px; }
+            .ticket-number { font-size: clamp(3rem, 3vw, 5rem); font-weight: 900; line-height: 1.2; margin: 10px 0; font-family: 'Courier New', monospace; }
+
+            .active-blue .ticket-number { color: #7abfff; text-shadow: 0 0 25px var(--glow-blue); }
+            .active-green .ticket-number { color: #7dff9a; text-shadow: 0 0 25px var(--glow-green); }
+
+            /* Waiting List Items */
+
+            .waiting-header { font-size: clamp(0.9rem, 1.5vw, 1.1rem); font-weight: 700; color: #f8f9fa; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+            .token-container { display: flex; flex-wrap: wrap; gap: 12px; }
+            .token-pill { background: rgba(255,255,255,0.08); padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: clamp(1rem, 1.8vw, 1.3rem); border: 1px solid rgba(255,255,255,0.15); display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+            .token-pill.prio { color: #7dff9a; border-color: rgba(40,167,69,0.5); background: rgba(40,167,69,0.1); }
+            .requeue-timer { font-size: clamp(0.75rem, 1.2vw, 0.9rem); font-weight: 700; color: var(--psa-gold); background: rgba(0, 0, 0, 0.3); border-radius: 6px; padding: 3px 8px; }
+
+            /* Audio Unlock Interactive Overlay Banner */
+
+            .audio-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(15, 35, 75, 0.98), rgba(8, 18, 40, 0.99)); z-index: 10000; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transition: opacity 0.5s ease, visibility 0.5s ease; }
+            .audio-box { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-glass); border-radius: var(--radius-lg); padding: 40px 50px; text-align: center; max-width: 550px; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); }
+
+            /* Animation for a new number */
+
+            @keyframes pulse-new { 0% { transform: scale(1); box-shadow: inset 0 0 0px rgba(255,255,255,0); } 50% { transform: scale(1.02); box-shadow: inset 0 0 20px rgba(255,255,255,0.2); } 100% { transform: scale(1); box-shadow: inset 0 0px 0px rgba(255,255,255,0); } }
+            .new-call { animation: pulse-new 1s infinite; background: rgba(255,255,255,0.15); }
+            @media (max-width: 992px) { .service-row { flex-direction: column; } .d-flex.gap-3.h-100 { flex-wrap: wrap; } .window-card { min-width: 250px; } }
+            @media (max-width: 768px) { .main-header { flex-direction: column; text-align: center; gap: 15px; } .main-header > div:first-child { flex-direction: column; gap: 10px !important; } .clock-container { text-align: center; } }
+
+        </style>
+    </head>
+
+    <body>
+        <div id="audio-init-overlay" class="audio-overlay">
+            <div class="audio-box">
+                <i class="fas fa-volume-up fa-4x mb-4 text-warning" style="filter: drop-shadow(0 0 15px rgba(255,215,0,0.4));"></i>
+                <h3 class="font-weight-bold text-white mb-2">Queue System Audio</h3>
+                <p style="color: #adb5bd; font-size: 1.05rem;" class="mb-4">Browsers block automatic voice generation profiles until an explicit interaction occurs. Press below to arm live voice localization announcements.</p>
+                <button id="btn-unlock-audio" class="btn btn-warning btn-lg font-weight-bold text-dark px-5 py-3" style="border-radius: 15px; box-shadow: 0 10px 20px rgba(255,215,0,0.25);">
+                    <i class="fas fa-play mr-2"></i> Enable System Voice
+                </button>
+            </div>
+        </div>
+
+        <div class="landscape-wrapper">
+            <div class="main-header">
+                <div style="display: flex; align-items: center; gap: 25px;">
+                    <img src="./res/PSA.png" alt="PSA Logo" height="85">
+                    <div class="header-title-container">
+                        <h2>Philippine Statistics Authority <span class="highlight">Queue</span></h2>
+                        <h6>Serving you better, one ticket at a time</h6>
+                    </div>
+                </div>
+                <div class="clock-container">
+                    <div class="clock-display" id="realtime-clock">00:00:00 PM</div>
+                    <div class="date-display" id="realtime-date">Loading date...</div>
+                </div>
+            </div>
+
+            <div class="service-row">
+                <div class="glass-panel serving-main">
+                    <div class="dept-tag tag-nid">National ID</div>
+                    <div class="d-flex gap-3 h-100" style="gap: 15px;">
+                        <div class="window-card active-blue">
+                            <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 1</div>
+                            <div class="ticket-number" id="nid-w1">---</div>
+                        </div>
+                        <div class="window-card active-blue">
+                            <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 2</div>
+                            <div class="ticket-number" id="nid-w2">---</div>
+                        </div>
+                        <div class="window-card active-green">
+                            <div class="win-title text-success"><i class="fas fa-star mr-2"></i> Priority</div>
+                            <div class="ticket-number" id="nid-prio">---</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-panel waiting-sidebar">
+                    <div class="waiting-header">National ID Waiting Queue</div>
+                    <div class="token-container" id="wait-nid"></div>
+                    <div class="waiting-header" style="margin-top: 25px;">Requeued Tickets</div>
+                    <div class="token-container" id="requeue-nid"></div>
+                </div>
+            </div>
+
+            <div class="service-row">
+                <div class="glass-panel serving-main">
+                    <div class="dept-tag tag-civ">Civil Registration</div>
+                    <div class="d-flex gap-3 h-100" style="gap: 15px;">
+                        <div class="window-card active-blue">
+                            <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Civil Registration Window</div>
+                            <div class="ticket-number" id="civ-window">---</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-panel waiting-sidebar">
+                    <div class="waiting-header">Civil Registration Waiting Queue</div>
+                    <div class="token-container" id="wait-civ"></div>
+                    <div class="waiting-header" style="margin-top: 25px;">Requeued Tickets</div>
+                    <div class="token-container" id="requeue-civ"></div>
+                </div>
+            </div>
+        </div>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io();
+
+            let currentlySpeakingTicket = null;
+
+            // Your existing voice function probably looks something like this:
+            function playVoiceFeedback(ticketLabel, windowName) {
+                if (!window.speechSynthesis) return;
+
+                // Track the active ticket label globally on the client side
+                currentlySpeakingTicket = ticketLabel;
+
+                const utterance = new SpeechSynthesisUtterance(`Now serving ticket number ${ticketLabel} at ${windowName}`);
+                
+                utterance.onend = () => {
+                    if (currentlySpeakingTicket === ticketLabel) {
+                        currentlySpeakingTicket = null; // Clear when finished normally
+                    }
+                };
+
+                window.speechSynthesis.speak(utterance);
+            }
+
+            // Optimized selective cancel listener:
+            socket.on('stop_voice', (data) => {
+                // Only cancel the audio if the system is actively announcing the updated ticket
+                if (window.speechSynthesis && currentlySpeakingTicket === data.ticketLabel) {
+                    window.speechSynthesis.cancel();
+                    currentlySpeakingTicket = null;
+                }
+            });
+            
+            // Audio System State Flags
+            let audioContextUnlocked = false;
+            let targetSystemLocale = 'en-US'; // Global toggle preference configuration ('fil-PH' or 'en-US')
+
+            // Prime Speech Synthesis Engine on explicit User Interaction
+            document.getElementById('btn-unlock-audio').addEventListener('click', () => {
+                audioContextUnlocked = true;
+                
+                const overlay = document.getElementById('audio-init-overlay');
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 500);
+
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    // Prime empty token to unlock native device hardware channels
+                    const emptyUtterance = new SpeechSynthesisUtterance("");
+                    window.speechSynthesis.speak(emptyUtterance);
+                }
+            });
+
+            function updateTime() {
+                const now = new Date();
+                document.getElementById('realtime-clock').innerText = now.toLocaleTimeString();
+                document.getElementById('realtime-date').innerText = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            }
+            setInterval(updateTime, 1000);
+
+            function renderQueueState(state) {
+                const serving = state?.currentServing || {};
+                const waiting = state?.waitingQueue || { national: [], civil: [] };
+
+                updateNumber('nid-w1', serving.national?.window1?.label, 'National ID Window 1');
+                updateNumber('nid-w2', serving.national?.window2?.label, 'National ID Window 2');
+                updateNumber('nid-prio', serving.national?.priorityWindow?.label, 'National ID Priority Window');
+                updateNumber('civ-window', serving.civil?.window1?.label, 'Civil Registration Window');
+
+                const nationalQueueLimited = waiting.national.slice(0, 4);
+                const civilQueueLimited = waiting.civil.slice(0, 4);
+                renderWait('wait-nid', nationalQueueLimited, waiting.national.length);
+                renderWait('wait-civ', civilQueueLimited, waiting.civil.length);
+                renderRequeueList('requeue-nid', waiting.national.filter(t => t.requeueTime));
+                renderRequeueList('requeue-civ', waiting.civil.filter(t => t.requeueTime));
+            }
+
+            // Localized Language Phrase Constructor Engine
+            function buildLocalizedPhrase(ticketNumber, windowName, preferredLocale) {
+                // Parse individual characters clean for phonetic string spacing drops
+                const phoneticTicket = ticketNumber.split('').map(char => {
+                    if (char === '-') return preferredLocale === 'en-US' ? ' ' : ' dash ';
+                    return char;
+                }).join(' ');
+
+                // Standardized Mappings
+                const dialogueTemplates = {
+                    'en-US': `Ticket number ${phoneticTicket}. Please proceed to ${windowName}.`,
+                    'fil-PH': `Numero ng tiket, ${phoneticTicket}. Pumunta po sa ${windowName}.`
+                };
+
+                return dialogueTemplates[preferredLocale] || dialogueTemplates['en-US'];
+            }
+
+            // High Precision System Voice Scanner Match
+            function selectTargetDeviceVoice(localeCode) {
+                if (!('speechSynthesis' in window)) return null;
+                const systemVoices = window.speechSynthesis.getVoices();
+                
+                // Primary exact language matching
+                let selectedVoice = systemVoices.find(v => v.lang === localeCode || v.lang.startsWith(localeCode.split('-')[0]));
+                
+                // Fallback check conditions for regional device mappings (e.g. Google or Microsoft variants)
+                if (!selectedVoice && localeCode === 'en-US') {
+                    selectedVoice = systemVoices.find(v => v.lang.includes('PH') || v.name.toLowerCase().includes('philippines'));
+                }
+                return selectedVoice || systemVoices[0];
+            }
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.onvoiceschanged = () => {
+                    selectTargetDeviceVoice(targetSystemLocale);
+                };
+            }
+
+            function announceTicket(ticketNumber, windowName) {
+                if (!audioContextUnlocked) {
+                    console.warn("Speech Synthesis engine deferred. Audio interaction modal remains active.");
+                    return;
+                }
+
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+
+                    const targetLocale = (windowName.toLowerCase().includes('priority')) ? 'en-US' : targetSystemLocale;
+                    const computedPhrase = buildLocalizedPhrase(ticketNumber, windowName, targetLocale);
+                    const utterance = new SpeechSynthesisUtterance(computedPhrase);
+                    
+                    const systemVoiceProfile = selectTargetDeviceVoice(targetLocale);
+                    if (systemVoiceProfile) {
+                        utterance.voice = systemVoiceProfile;
+                    }
+
+                    // Environmental pacing balancing calibrations
+                    utterance.rate = targetLocale === 'en-US' ? 0.80 : 0.85;
+                    utterance.pitch = 1.0;
+                    utterance.lang = targetLocale;
+
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+
+            function updateNumber(id, val, windowName) {
+                const el = document.getElementById(id);
+                const newVal = val || '---';
+                const oldVal = el.innerText;
+                
+                // If window is being cleared (ticket completed/terminated)
+                if (oldVal !== '---' && newVal === '---') {
+                    // Stop any ongoing voice announcements
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                    }
+                }
+                // If new ticket is being displayed
+                else if (oldVal === '---' && newVal !== '---') {
+                    el.classList.add('new-call');
+                    setTimeout(() => el.classList.remove('new-call'), 5000);
+                    announceTicket(newVal, windowName);
+                }
+                
+                el.innerText = newVal;
+            }
+
+            function formatTimeRemaining(ms) {
+                if (ms <= 0) return 'Expired';
+                const totalSeconds = Math.floor(ms / 1000);
+                const mins = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            function renderWait(id, list, totalCount = 0) {
+                const container = document.getElementById(id);
+                if (!Array.isArray(list) || list.length === 0) {
+                    container.innerHTML = '<div class="token-pill" style="font-size: 1rem; color: #adb5bd;">No pending tickets</div>';
+                    return;
+                }
+
+                container.innerHTML = list.map(t => 
+                    `<div class="token-pill ${t.isPriority ? 'prio' : ''}">${t.label}</div>`
+                ).join('');
+
+                if (totalCount > list.length) {
+                    const moreCount = totalCount - list.length;
+                    container.innerHTML += `<div class="token-pill" style="font-size: 1rem;">+${moreCount} more waiting</div>`;
+                }
+            }
+
+            function renderRequeueList(id, list) {
+                const container = document.getElementById(id);
+                if (!Array.isArray(list) || list.length === 0) {
+                    container.innerHTML = '<div class="token-pill" style="font-size: 1rem; color: #adb5bd;">No requeued tickets</div>';
+                    return;
+                }
+
+                container.innerHTML = list.map(t => {
+                    const remaining = formatTimeRemaining(600000 - (Date.now() - Number(t.requeueTime)));
+                    return `
+                        <div class="token-pill ${t.isPriority ? 'prio' : ''}">
+                            <span>${t.label}</span>
+                            <span class="requeue-timer" data-requeue-time="${t.requeueTime}">${remaining}</span>
+                        </div>`;
+                }).join('');
+            }
+
+            function updateRequeueTimers() {
+                document.querySelectorAll('.requeue-timer').forEach(el => {
+                    const requeueTime = Number(el.dataset.requeueTime);
+                    const remaining = formatTimeRemaining(600000 - (Date.now() - requeueTime));
+                    el.innerText = remaining;
+                });
+            }
+        
+
+            setInterval(updateRequeueTimers, 1000);
+
+            socket.on('queue_update', renderQueueState);
+            
+            socket.on('repeat_voice', (data) => {
+                if (!data || !data.ticketNumber) return;
+                const targetWindow = data.windowName || 'Designated Window';
+                announceTicket(data.ticketNumber, targetWindow);
+            });
+            
+            socket.on('connect', () => socket.emit('request_queue_update'));
+
+            updateTime();
+        </script>
+    </body>
+</html>

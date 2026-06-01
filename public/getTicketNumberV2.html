@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>PSA Kiosk - Ticket Selection</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root { --bg-glass: rgba(25, 35, 60, 0.459); --border-glass: rgba(255, 255, 255, 0.25); --radius-lg: 35px; --radius-md: 20px; --text-light: #f8f9fa; }
+
+        body {  min-height: 100vh; font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;  display: flex;  align-items: center; justify-content: center; padding: 30px; background: linear-gradient(135deg, rgba(10, 25, 60, 0.85), rgba(15, 45, 90, 0.85)), url('./res/PSA-BG.png') center/cover fixed;  background-blend-mode: overlay; overflow: hidden; color: var(--text-light); }
+
+        /* Glassmorphism Main Container */
+
+        .main-container-card { border-radius: var(--radius-lg) !important; background: var(--bg-glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border-glass);box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5); overflow: hidden; }
+
+        /* Service Cards */
+
+        .service-card { padding: 30px; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: var(--radius-md) !important; cursor: pointer; transition: all 0.3s ease; height: 100%; border: 1px solid rgba(255, 255, 255, 0.15);  color: var(--text-light); box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.02); }
+        .service-card:hover { transform: translateY(-8px); background: rgba(255, 255, 255, 0.15); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3), inset 0 0 15px rgba(255, 255, 255, 0.1) !important; border-color: rgba(255, 255, 255, 0.5); }
+        .service-card i {text-shadow: 0 0 15px rgba(255, 255, 255, 0.2); }
+        
+        /* Adjusted Icon Colors for Dark Mode */
+        
+        .icon-national { color: #64b5f6; }
+        .icon-civil { color: #81c784; }
+
+        /* Overlays & Popups */
+
+        .popup-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+        .popup-box { width: 100%; max-width: 500px; background: var(--bg-glass); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid var(--border-glass); border-radius: var(--radius-lg) !important; overflow: hidden; padding: 40px !important; color: var(--text-light); box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+
+        /* Large Buttons */
+
+        .btn-xl { padding: 1.2rem; font-size: 1.25rem; font-weight: bold; border-radius: var(--radius-md) !important; transition: all 0.2s ease; border: 1px solid rgba(255, 255, 255, 0.2); color: #fff;}
+        .btn-primary.btn-xl { background: linear-gradient(135deg, #0056b3, #0033a0); box-shadow: 0 4px 15px rgba(0, 86, 179, 0.4); }
+        .btn-primary.btn-xl:hover { background: linear-gradient(135deg, #0069d9, #0044cc); transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.5); }
+        .btn-success.btn-xl { background: linear-gradient(135deg, #218838, #1e7e34); box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4); }
+        .btn-success.btn-xl:hover { background: linear-gradient(135deg, #28a745, #218838); transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.5); }
+        .btn-xl:active { transform: scale(0.98); }
+
+        /* Ticket Stub Visual */
+
+        .ticket-receipt { background: #ffffff; color: #1a3d7c; border: none; border-radius: var(--radius-md); position: relative; padding: 25px; margin: 20px 0; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+
+        /* Inverse circles to match the dark overlay background */
+
+        .ticket-receipt::before, .ticket-receipt::after { content: ''; position: absolute; top: 50%; width: 24px; height: 24px; background: rgba(18, 18, 18, 0.85);  border-radius: 50%; transform: translateY(-50%);}
+        .ticket-receipt::before { left: -12px; }
+        .ticket-receipt::after { right: -12px; }
+        .ticket-label-large { font-size: 3.5rem; font-weight: 900; color: #1a3d7c; letter-spacing: 2px; }
+
+        /* Themed Accents */
+
+        .gold-divider { width: 70px; border-top: 4px solid #ffd700; margin: 15px auto; border-radius: 10px; box-shadow: 0 0 12px rgba(255, 215, 0, 0.4); }
+
+        /* Adjustments for typography on dark background */
+
+        .text-muted { color: #adb5bd !important; }
+        .btn-link.text-muted { color: #ced4da !important; }
+        .btn-link.text-muted:hover { color: #ffffff !important; text-decoration: none; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card main-container-card">
+            <div class="card-body p-5">
+                <div class="text-center mb-5">
+                    <img src="/res/PSA.png" alt="PSA Logo" height="200" class="mb-3">
+                    <h1 class="font-weight-bold text-white mb-2">Queue Ticketing System</h1>
+                    <p class="font-weight-bold text-white mb-2" >How can we help you today?</p>
+                    <div class="gold-divider"></div>
+                </div>
+
+                <div class="row justify-content-center">
+                    <div class="col-md-5 mb-4">
+                        <div class="card service-card text-center py-4" onclick="openSelection('national')">
+                            <div class="card-body">
+                                <i class="fas fa-id-card fa-4x icon-national mb-4"></i>
+                                <h4 class="font-weight-bold">National ID</h4>
+                                <p class="text-muted small mb-0">PhilSys Registration & Updates</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5 mb-4">
+                        <div class="card service-card text-center py-4" onclick="openSelection('civil')">
+                            <div class="card-body">
+                                <i class="fas fa-file-alt fa-4x icon-civil mb-4"></i>
+                                <h4 class="font-weight-bold">Civil Registration</h4>
+                                <p class="text-muted small mb-0">Birth, Marriage, Death Certs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="selectionOverlay" class="popup-overlay">
+        <div class="popup-box text-center">
+            <h2 class="font-weight-bold text-white mb-4">Select Category</h2>
+            <button class="btn btn-primary btn-xl btn-block mb-3" onclick="requestTicket(false)">
+                <i class="fas fa-user mr-2"></i> REGULAR 
+            </button>
+            <button class="btn btn-success btn-xl btn-block mb-3" onclick="requestTicket(true)">
+                <i class="fas fa-wheelchair mr-2"></i> PRIORITY
+            </button>
+            <p class="small text-muted mb-4 mt-3">Note: Priority lanes are for Pregnant Women, PWD, and Senior Citizens.</p>
+            <button class="btn btn-link text-muted" onclick="closeAll()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="resultOverlay" class="popup-overlay">
+        <div class="popup-box text-center">
+            <div id="resultContent">
+                </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="kiosk.js"></script>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="kiosk.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules/
+log/
+*.log
+.env
+.env.*
+credentials.json
+public.7z
+temp_log_inspect.js

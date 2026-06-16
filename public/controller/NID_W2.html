@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Controller - National ID Window 2</title>
+    <link rel="icon" type="image/png" href="./res/PSA.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body data-dept="national" data-window="window2" data-priority="false" data-page-location="National ID - WINDOW 2">
+
+    <div class="header-nav">
+        <div class="logo-section">
+            <i><img src="/res/PSA.png" alt="PSA Logo" height="90" class="mb-1"></i>
+            <div class="title-text">
+                <h1>Philippine Statistics Authority</h1>
+                <p>National ID Control Dashboard</p>
+                <div id="controllerUserInfo" class="user-meta">Loading user...</div>
+            </div>
+        </div>
+        <a href="#" id="btn-exit" style="color: var(--psa-red); text-decoration: none; font-weight: bold;">
+            EXIT MENU <i class="fas fa-sign-out-alt ml-2"></i>
+        </a>
+    </div>
+
+    <div class="content-grid">
+        <div class="controller-panel">
+            <div class="window-badge">WINDOW 2</div>
+            <div class="serving-label">Now Serving</div>
+            <div class="ticket-display" id="current-ticket">---</div>
+            
+            <div class="control-btns">
+                <button class="action-btn btn-terminate" id="btn-terminate">
+                    <i class="fas fa-times-circle"></i>
+                    <span>Terminated</span>
+                </button>
+                <button class="action-btn btn-complete" id="btn-complete">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Completed</span>
+                </button>
+                <button class="action-btn btn-warning" id="btn-requeue">
+                    <i class="fas fa-redo-alt"></i>
+                    <span>Requeue</span>
+                </button>
+                <button class="action-btn btn-secondary mb-3 w-100" id="btn-repeat-voice" style="background-color: #6c757d; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold;">
+                <i class="fas fa-volume-up mr-2"></i>
+                <span>Repeat Voice</span>
+            </button>
+            </div>
+        </div>
+
+        <div class="tickets-panel">
+            <div class="queue-title">NEW TICKETS</div>
+            <div class="ticket-scroll" id="queue-items"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/js/dashboard-controller.js"></script>
+</body>
+</html>

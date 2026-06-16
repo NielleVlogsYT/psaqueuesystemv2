@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=yes">
+    <title>PSA Professional Queue Display</title>
+    <link rel="icon" type="image/png" href="./res/PSA.png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        /* If you have Trajan font files, place them in ./res/fonts/ and this will load them */
+        @font-face {
+            font-family: 'TrajanPro';
+            src: url('./res/fonts/TrajanPro-Regular.woff2') format('woff2'),
+                 url('./res/fonts/TrajanPro-Regular.woff') format('woff'),
+                 url('./res/fonts/TrajanPro-Regular.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+        :root {
+            --bg-glass: rgba(25, 35, 60, 0.55);
+            --header-bg: #0b2740; /* solid header background */
+            --border-glass: rgba(255, 255, 255, 0.25);
+            --radius-lg: 0;
+            --radius-md: 0;
+            --text-light: #f8f9fa;
+            --psa-gold: #ffd700;
+            --glow-blue: rgba(0, 123, 255, 0.6);
+            --glow-green: rgba(184, 127, 15, 0.75);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            overflow: hidden; /* Locks the page so it never scrolls externally */
+            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-light);
+        }
+
+        /* Background wrapper */
+        .landscape-wrapper {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            padding: clamp(10px, 2vw, 20px);
+            background: linear-gradient(135deg, rgba(10, 25, 60, 0.85), rgba(15, 45, 90, 0.85)), url('./res/PSA-BG.png') center/cover fixed;
+            background-blend-mode: overlay;
+            box-sizing: border-box;
+        }
+
+        /* Header – responsive stacking */
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 18px;
+            padding: 22px 24px;
+            margin-bottom: 24px;
+            background: var(--header-bg) !important;
+            border: 1px solid rgba(255,255,255,0.3) !important;
+            border-radius: 0;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+        }
+
+        .header-logo-area {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* Logo image (no extra wrapper) */
+        .psa-logo {
+            width: clamp(60px, 10vw, 180px);
+            height: clamp(60px, 10vw, 180px);
+            object-fit: cover;
+            background: transparent;
+            border-radius: 50%;
+            display: block;
+            padding: 0;
+            box-shadow: 0 8px 22px rgba(0,0,0,0.4);
+            border: 0.5px solid rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .header-title-container h2 {
+            font-size: clamp(1.2rem, 5vw, 2.8rem);
+            font-weight: 900;
+            line-height: 1.2;
+            margin: 0;
+            color: var(--text-light);
+            letter-spacing: 1px;
+            font-family: 'TrajanPro', 'Trajan', 'Cinzel', serif; /* Use TrajanPro if provided, else fallbacks */
+        }
+
+        .header-title-container h2 span.highlight {
+            color: var(--psa-gold);
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .header-title-container h6 {
+            font-size: clamp(0.7rem, 3vw, 1.2rem);
+            font-weight: 600;
+            color: #adb5bd;
+            margin: 0;
+        }
+
+        .clock-container {
+            text-align: right;
+            margin-left: auto;
+        }
+
+        .clock-display {
+            font-family: 'Segoe UI', monospace;
+            font-size: clamp(2.2rem, 6vw, 3.6rem);
+            font-weight: 900;
+            color: var(--psa-gold);
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.38);
+            line-height: 1.05;
+        }
+
+        .date-display {
+            font-size: clamp(1.1rem, 3vw, 1.6rem);
+            font-weight: 700;
+            color: #ced4da;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 767px) {
+            .main-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            .clock-container {
+                text-align: center;
+                width: 100%;
+            }
+            .header-logo-area {
+                justify-content: center;
+            }
+        }
+
+        /* Service rows */
+        .service-row {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(10px, 2vw, 20px);
+            margin-bottom: clamp(10px, 2vw, 20px);
+            min-height: 0; /* Crucial: Prevents flex items from overflowing the screen */
+        }
+
+        /* Combined departments wrapper (dark blue background) */
+        .departments-wrapper {
+            background: linear-gradient(135deg, #153b6a, #0e2543); /* darker, higher contrast wrapper */
+            padding: clamp(12px, 2vw, 30px);
+            border-radius: 0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+            margin-bottom: clamp(10px, 2vw, 20px);
+            color: #f8f9fa;
+            border: 1px solid rgba(255,255,255,0.16);
+        }
+
+        /* Glass panels */
+        .glass-panel {
+            background: var(--bg-glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--border-glass);
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            height: 100%; 
+        }
+
+        .departments-wrapper .glass-panel {
+            background: rgba(255, 255, 255, 0.7); /* lighter translucent white for contrast on gray */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 24, 32, 0.12);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .departments-wrapper .glass-panel {
+            background: rgba(25, 35, 60, 0.5); /* semi-transparent dark for dark blue wrapper */
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .serving-main {
+            flex: 3;
+            min-width: 240px;
+            padding: clamp(12px, 2vw, 25px);
+        }
+
+        .waiting-sidebar {
+            flex: 1;
+            min-width: 250px;
+            padding: clamp(10px, 2vw, 20px);
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .departments-wrapper .waiting-sidebar {
+            background: transparent;
+            padding: 0;
+        }
+
+        /* Department tags */
+        .dept-tag {
+            font-size: clamp(1.15rem, 3vw, 1.8rem);
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 10px 18px;
+            border-radius: 0;
+            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+            display: inline-block;
+            margin-bottom: 20px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.28);
+        }
+
+        .tag-nid { background: linear-gradient(135deg, #0056b3, #0033a0); color: white; }
+        .tag-civ { background: linear-gradient(135deg, #ffd700, #e6c200); color: #1f1f1f; }
+
+        /* Window cards – responsive flex */
+        .d-flex.gap-3 {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .window-card {
+            background: #ffffff;
+            border-radius: 0;
+            padding: clamp(20px, 3vw, 28px);
+            text-align: center;
+            flex: 1 1 170px;
+            min-width: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: stretch;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+
+        .win-title {
+            font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+            color: #374151;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.75rem;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 1rem;
+        }
+
+        .win-title i {
+            font-size: 1.1em;
+            margin-right: 0.5rem;
+        }
+
+        .departments-wrapper .win-title {
+            color: #374151; /* dark gray on white background */
+        }
+
+        .ticket-number {
+            font-size: clamp(2.4rem, 7vw, 6rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin: 10px 0;
+            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+            word-break: break-word;
+            letter-spacing: 0.04em;
+            color: #111827;
+        }
+
+        .win-title {
+            font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+            color: #374151;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.75rem;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 1rem;
+            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+        }
+
+        .window-card.closed .ticket-number {
+            color: #6b7280;
+            text-shadow: none;
+            letter-spacing: 0.18rem;
+        }
+
+        .active-blue .ticket-number {
+            color: #0c63ff;
+            text-shadow: none;
+        }
+
+        .active-green .ticket-number {
+            color: #b87f0f;
+            text-shadow: none;
+        }
+
+        .window-card.active-green .win-title {
+            color: #b87f0f;
+        }
+        .window-card.active-green .win-title i,
+        .window-card.active-green .win-title.text-success {
+            color: #b87f0f !important;
+        }
+
+        /* Waiting lists */
+        /* Blue container style like image 3 */
+        .blue-container {
+            background: linear-gradient(135deg, #1f3f7c, #112a55);
+            color: white;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            text-align: center;
+            border-radius: 0;
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            font-size: clamp(1.1rem, 3vw, 1.5rem);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .waiting-header {
+            font-size: clamp(1.05rem, 3vw, 1.55rem);
+            font-weight: 800;
+            color: #000000;
+            padding: 14px 18px;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            background: linear-gradient(135deg, #ffd700, #e6c200);
+            border-radius: 0;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 0, 0, 0.24);
+            text-align: center;
+        }
+
+        .departments-wrapper .waiting-header {
+            color: #000000;
+            background: linear-gradient(135deg, #ffd700, #e6c200);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .token-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            padding: 0;
+            margin: 0;
+            align-items: center;
+        }
+
+        /* Enlarged, but responsive token rows for waiting/requeue lists */
+        .token-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 16px 18px;
+            color: #ffffff;
+            font-weight: 900;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.08);
+            margin-bottom: 1rem;
+            min-width: 0;
+            font-size: clamp(1rem, 3vw, 1.4rem);
+            border-radius: 0;
+        }
+
+        .token-row .token-label {
+            font-family: Arial, 'Helvetica Neue', monospace;
+            font-size: clamp(1rem, 3vw, 1.8rem);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.04em;
+            color: #ffffff;
+        }
+
+        .token-row .token-timer {
+            margin-left: auto;
+            background: rgba(0,0,0,0.88);
+            color: #ffffff;
+            padding: 8px 14px;
+            font-size: clamp(1rem, 3vw, 1.25rem);
+            border-radius: 0;
+            min-width: 60px;
+            text-align: center;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .token-row.priority {
+            border-left: 4px solid #b87f0f;
+            padding-left: 8px;
+        }
+
+        .token-row.priority .token-label {
+            color: #b87f0f;
+        }
+
+        @media (max-width: 480px) {
+            .token-row { font-size: 1rem; padding: 8px 10px; }
+            .token-row .token-timer { margin-left: 8px; min-width: 44px; }
+        }
+
+        .waiting-more {
+            margin-left: auto;
+            align-self: center;
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            padding: 0;
+            margin: 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            white-space: nowrap;
+            font-weight: 800;
+        }
+
+        .waiting-text {
+            font-size: 1.1rem;
+            color: #ffffff;
+            padding: 0;
+            margin: 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            white-space: nowrap;
+        }
+
+        .token-container .token-pill.prio {
+            color: #b87f0f;
+            border: none;
+            background: transparent;
+        }
+
+        .token-container .token-pill .requeue-timer {
+            font-size: clamp(0.9rem, 1.8vw, 1rem);
+            background: rgba(255,255,255,0.12);
+            padding: 4px 8px;
+            border-radius: 0;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        /* Audio unlock overlay – responsive */
+        .audio-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(15, 35, 75, 0.98), rgba(8, 18, 40, 0.99));
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(20px);
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .audio-box {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            border-radius: 0;
+            padding: 30px 25px;
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+            margin: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        @media (max-width: 550px) {
+            .audio-box {
+                padding: 20px;
+            }
+            .audio-box h3 {
+                font-size: 1.4rem;
+            }
+            .btn-lg {
+                font-size: 1rem;
+                padding: 10px 20px;
+            }
+        }
+
+        /* Animation for new call */
+        @keyframes pulse-new {
+            0% { transform: scale(1); box-shadow: inset 0 0 0px rgba(255,255,255,0); }
+            50% { transform: scale(1.02); box-shadow: inset 0 0 20px rgba(255,255,255,0.2); }
+            100% { transform: scale(1); box-shadow: inset 0 0px 0px rgba(255,255,255,0); }
+        }
+
+        .new-call {
+            animation: pulse-new 1s infinite;
+            background: rgba(255,255,255,0.15);
+        }
+
+        /* Extra small adjustments */
+        @media (max-width: 576px) {
+            .window-card {
+                min-width: 100%;
+                flex: 1 1 auto;
+            }
+            .serving-main .d-flex.gap-3 {
+                flex-direction: column;
+            }
+            .token-pill {
+                width: 100%;
+            }
+        }
+
+        /* Portrait Layout Fixes */
+        @media (max-aspect-ratio: 1/1) {
+            .service-row {
+                flex-direction: column;
+            }
+            
+            .serving-main, .waiting-sidebar {
+                width: 100%;
+                flex: auto;
+            }
+            
+            .waiting-sidebar {
+                max-height: 30vh; /* Limits waiting area height so active windows stay visible */
+            }
+            
+            .header-logo-area {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div id="audio-init-overlay" class="audio-overlay">
+    <div class="audio-box">
+        <i class="fas fa-volume-up fa-4x mb-4 text-warning" style="filter: drop-shadow(0 0 15px rgba(255,215,0,0.4));"></i>
+        <h3 class="font-weight-bold text-white mb-2">Queue System Audio</h3>
+        <p style="color: #adb5bd; font-size: 1.05rem;" class="mb-4">Browsers block automatic voice generation until an explicit interaction occurs. Press below to enable voice announcements.</p>
+        <button id="btn-unlock-audio" class="btn btn-warning btn-lg font-weight-bold text-dark px-5 py-3" style="border-radius: 0; box-shadow: 0 10px 20px rgba(255,215,0,0.25);">
+            <i class="fas fa-play mr-2"></i> Enable System Voice
+        </button>
+    </div>
+</div>
+
+<div class="landscape-wrapper">
+    <div class="main-header">
+        <div class="header-logo-area">
+            <img src="./res/PSA-removebg-preview.png" alt="PSA Logo" class="psa-logo">
+            <div class="header-title-container">
+                <h2>Philippine Statistics Authority - PSO Bulacan</h2>
+            </div>
+        </div>
+        <div class="clock-container">
+            <div class="clock-display" id="realtime-clock">00:00:00 PM</div>
+            <div class="date-display" id="realtime-date">Loading date...</div>
+        </div>
+    </div>
+
+    <div class="departments-wrapper">
+    <div class="service-row">
+        <div class="serving-main">
+            <div class="dept-tag tag-nid">National ID</div>
+            <div class="d-flex gap-3">
+                <div class="window-card active-blue">
+                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 1</div>
+                    <div class="ticket-number" id="nid-w1">CLOSED</div>
+                </div>
+                <div class="window-card active-blue">
+                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 2</div>
+                    <div class="ticket-number" id="nid-w2">CLOSED</div>
+                </div>
+                <div class="window-card active-green">
+                    <div class="win-title text-success"><i class="fas fa-star mr-2"></i> Priority</div>
+                    <div class="ticket-number" id="nid-prio">CLOSED</div>
+                </div>
+            </div>
+        </div>
+        <div class="waiting-sidebar">
+            <div class="blue-container">National ID Waiting Queue</div>
+            <div class="token-container" id="wait-nid"></div>
+            <div class="blue-container" style="margin-top: 25px;">Requeued Tickets</div>
+            <div class="token-container" id="requeue-nid"></div>
+        </div>
+    </div>
+
+    <div class="service-row">
+        <div class="serving-main">
+            <div class="dept-tag tag-civ">Civil Registration</div>
+            <div class="d-flex gap-3">
+                <div class="window-card active-blue">
+                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 1</div>
+                    <div class="ticket-number" id="civ-window-1">CLOSED</div>
+                </div>
+                <div class="window-card active-blue">
+                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 2</div>
+                    <div class="ticket-number" id="civ-window-2">CLOSED</div>
+                </div>
+            </div>
+        </div>
+        <div class="waiting-sidebar">
+            <div class="waiting-header">Civil Registration Waiting Queue</div>
+            <div class="token-container" id="wait-civ"></div>
+            <div class="waiting-header" style="margin-top: 25px;">Requeued Tickets</div>
+            <div class="token-container" id="requeue-civ"></div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    let currentlySpeakingTicket = null;
+    let latestQueueState = null;
+    let activeWindows = {
+        national: { window1: false, window2: false, priorityWindow: false },
+        civil: { window1: false, window2: false }
+    };
+
+    function playVoiceFeedback(ticketLabel, windowName) {
+        if (!window.speechSynthesis) return;
+        currentlySpeakingTicket = ticketLabel;
+        const utterance = new SpeechSynthesisUtterance(`Now serving ticket number ${ticketLabel} at ${windowName}`);
+        utterance.onend = () => {
+            if (currentlySpeakingTicket === ticketLabel) currentlySpeakingTicket = null;
+        };
+        window.speechSynthesis.speak(utterance);
+    }
+
+    socket.on('stop_voice', (data) => {
+        if (window.speechSynthesis && currentlySpeakingTicket === data.ticketLabel) {
+            window.speechSynthesis.cancel();
+            currentlySpeakingTicket = null;
+        }
+    });
+
+    let audioContextUnlocked = false;
+    let targetSystemLocale = 'en-US';
+    
+    // UPDATED EVENT LISTENER WITH FIXES
+    document.getElementById('btn-unlock-audio').addEventListener('click', () => {
+        audioContextUnlocked = true;
+        const overlay = document.getElementById('audio-init-overlay');
+        
+        // FIX 1: Remove the backdrop filter right before fading out 
+        // This prevents the GPU from glitching when exposing the blurred panels underneath
+        overlay.style.backdropFilter = 'none';
+        overlay.style.webkitBackdropFilter = 'none';
+        
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 500);
+        
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            
+            // FIX 2: Use a space (" ") instead of an empty string ("") to prevent tab crashes
+            const emptyUtterance = new SpeechSynthesisUtterance(" ");
+            emptyUtterance.volume = 0; // Mute the audio so it stays completely silent
+            window.speechSynthesis.speak(emptyUtterance);
+        }
+    });
+
+    function updateTime() {
+        const now = new Date();
+        document.getElementById('realtime-clock').innerText = now.toLocaleTimeString();
+        document.getElementById('realtime-date').innerText = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    setInterval(updateTime, 1000);
+
+    function renderQueueState(state) {
+        latestQueueState = state || latestQueueState;
+        if (!latestQueueState) return;
+        const serving = latestQueueState?.currentServing || {};
+        const waiting = latestQueueState?.waitingQueue || { national: [], civil: [] };
+
+        updateNumber('nid-w1', serving.national?.window1?.label, 'National ID Window 1', activeWindows.national.window1);
+        updateNumber('nid-w2', serving.national?.window2?.label, 'National ID Window 2', activeWindows.national.window2);
+        updateNumber('nid-prio', serving.national?.priorityWindow?.label, 'National ID Priority Window', activeWindows.national.priorityWindow);
+        updateNumber('civ-window-1', formatCivilRegistrationLabel(serving.civil?.window1?.label), 'Civil Registration Window 1', activeWindows.civil.window1);
+        updateNumber('civ-window-2', formatCivilRegistrationLabel(serving.civil?.window2?.label), 'Civil Registration Window 2', activeWindows.civil.window2);
+
+        const nationalQueueLimited = waiting.national.slice(0, 3);
+        const civilQueueLimited = waiting.civil.slice(0, 3);
+        renderWait('wait-nid', nationalQueueLimited, waiting.national.length);
+        renderWait('wait-civ', civilQueueLimited, waiting.civil.length);
+        const nationalRequeueLimited = waiting.national.filter(t => t.requeueTime).slice(0, 3);
+        const civilRequeueLimited = waiting.civil.filter(t => t.requeueTime).slice(0, 3);
+        const nationalRequeueTotal = waiting.national.filter(t => t.requeueTime).length;
+        const civilRequeueTotal = waiting.civil.filter(t => t.requeueTime).length;
+        renderRequeueList('requeue-nid', nationalRequeueLimited, nationalRequeueTotal);
+        renderRequeueList('requeue-civ', civilRequeueLimited, civilRequeueTotal);
+    }
+
+    function buildLocalizedPhrase(ticketNumber, windowName, preferredLocale) {
+
+        const raw = String(ticketNumber || '').trim();
+        let prefixWord = null;
+        let rest = raw;
+
+        const m = raw.match(/^([A-Za-z]{1,5})[-_ ]?(.*)$/);
+        if (m) {
+            const p = m[1].toUpperCase();
+            if (p === 'NID') prefixWord = 'National ID';
+            else if (p === 'CR') prefixWord = 'Civil Registration';
+            else if (p === 'R') prefixWord = 'Regular';
+            else if (p === 'P') prefixWord = 'Priority';
+            if (m[2] !== undefined) rest = m[2];
+        }
+
+        // Convert the rest to a spaced phonetic sequence (digits as words, letters spelled)
+        const digitMap = { '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine' };
+        const restChars = rest.split('').filter(c => c !== '-' && c !== '_');
+        // If this is a Civil Registration ticket and the rest is a whole word
+        // like CONTROL or COMBINED, or the phrase "combine civil control", speak it naturally
+        // (no per-letter phonetic).
+        let restPhonetic = null;
+        if (prefixWord === 'Civil Registration') {
+            const normalizedWords = rest.replace(/[-_]+/g, ' ').trim().toLowerCase();
+            // Speak the phrase naturally when it contains combine + civil + control
+            if (normalizedWords.includes('combine') && normalizedWords.includes('civil') && normalizedWords.includes('control')) {
+                restPhonetic = normalizedWords;
+            } else {
+                const cleanedWhole = rest.replace(/[-_ ]/g, '').toUpperCase();
+                const wholeWordMap = { 'CONTROL': 'control', 'CTRL': 'control', 'COMBINED': 'combined', 'COMBINE': 'combined' };
+                if (/^[A-Z]+$/.test(cleanedWhole) && cleanedWhole.length > 1) {
+                    if (wholeWordMap[cleanedWhole]) restPhonetic = wholeWordMap[cleanedWhole];
+                    else restPhonetic = cleanedWhole.toLowerCase();
+                }
+            }
+        }
+
+        if (!restPhonetic) {
+            restPhonetic = restChars.map(ch => {
+                if (/[0-9]/.test(ch)) return digitMap[ch] || ch;
+                if (/[A-Za-z]/.test(ch)) {
+                    const up = ch.toUpperCase();
+                    if (up === 'R') return 'regular';
+                    if (up === 'P') return 'priority';
+                    return up.split('').join(' ');
+                }
+                return ch;
+            }).join(' ');
+        }
+
+        const phoneticTicket = prefixWord ? `${prefixWord} ${restPhonetic}`.trim() : raw.split('').map(char => char === '-' ? (preferredLocale === 'en-US' ? ' ' : ' dash ') : char).join(' ');
+
+        const dialogueTemplates = {
+            'en-US': `${phoneticTicket}. proceed to ${windowName}. Thank you.`,
+            'fil-PH': `Numero ng tiket, ${phoneticTicket}. Pumunta po sa ${windowName}. Salamat po.`
+        };
+        return dialogueTemplates[preferredLocale] || dialogueTemplates['en-US'];
+    }
+
+    function normalizeWindowName(name) {
+        if (!name) return name;
+        let s = String(name);
+        s = s.replace(/\bNID\b/gi, 'National ID');
+        s = s.replace(/\bCR\b/gi, 'Civil Registration');
+        s = s.replace(/\bnational id\b/gi, 'National ID');
+        s = s.replace(/\bcivil registration\b/gi, 'Civil Registration');
+        return s;
+    }
+
+    function formatCivilRegistrationLabel(label) {
+        if (!label) return label;
+        return String(label).replace(/^CR(?=[-_])/i, 'CIVILREG');
+    }
+
+    function selectTargetDeviceVoice(localeCode) {
+        if (!('speechSynthesis' in window)) return null;
+        const systemVoices = window.speechSynthesis.getVoices();
+        let selectedVoice = systemVoices.find(v => v.lang === localeCode || v.lang.startsWith(localeCode.split('-')[0]));
+        if (!selectedVoice && localeCode === 'en-US') {
+            selectedVoice = systemVoices.find(v => v.lang.includes('PH') || v.name.toLowerCase().includes('philippines'));
+        }
+        return selectedVoice || systemVoices[0];
+    }
+
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => {
+            selectTargetDeviceVoice(targetSystemLocale);
+        };
+    }
+
+    function announceWindowOpen(windowName) {
+        if (!audioContextUnlocked) return;
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            windowName = normalizeWindowName(windowName);
+            const targetLocale = (windowName.toLowerCase().includes('priority')) ? 'en-US' : targetSystemLocale;
+            const phrase = targetLocale === 'fil-PH' ? `${windowName} ay bukas na, salamat po.` : `${windowName} is open, thank you.`;
+            const utterance = new SpeechSynthesisUtterance(phrase);
+            const voice = selectTargetDeviceVoice(targetLocale);
+            if (voice) utterance.voice = voice;
+            utterance.rate = targetLocale === 'en-US' ? 0.80 : 0.95;
+            utterance.pitch = 1.0;
+            utterance.lang = targetLocale;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function announceTicket(ticketNumber, windowName) {
+        if (!audioContextUnlocked) return;
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            windowName = normalizeWindowName(windowName);
+            const targetLocale = (windowName.toLowerCase().includes('priority')) ? 'en-US' : targetSystemLocale;
+            const phrase = buildLocalizedPhrase(ticketNumber, windowName, targetLocale);
+            const utterance = new SpeechSynthesisUtterance(phrase);
+            const voice = selectTargetDeviceVoice(targetLocale);
+            if (voice) utterance.voice = voice;
+            utterance.rate = targetLocale === 'en-US' ? 0.80 : 0.85;
+            utterance.pitch = 1.0;
+            utterance.lang = targetLocale;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function renderActiveWindows(users) {
+        activeWindows = {
+            national: { window1: false, window2: false, priorityWindow: false },
+            civil: { window1: false, window2: false }
+        };
+        (users || []).forEach(user => {
+            const location = (user.location || '').toLowerCase();
+            if (location.includes('national id')) {
+                if (location.includes('window 1')) activeWindows.national.window1 = true;
+                if (location.includes('window 2')) activeWindows.national.window2 = true;
+                if (location.includes('priority')) activeWindows.national.priorityWindow = true;
+            }
+            if (location.includes('civil registration')) {
+                if (location.includes('window 1')) activeWindows.civil.window1 = true;
+                if (location.includes('window 2')) activeWindows.civil.window2 = true;
+            }
+        });
+        renderQueueState(latestQueueState);
+    }
+
+    function updateNumber(id, val, windowName, isActive) {
+        const el = document.getElementById(id);
+        const newVal = val ? val : (isActive ? '---' : 'CLOSED');
+        const oldVal = el.innerText.trim();
+        const wasClosed = oldVal === 'CLOSED';
+        const isClosed = newVal === 'CLOSED';
+        const isPlaceholder = newVal === '---';
+
+        if (!wasClosed && isClosed) {
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        }
+
+        if (oldVal !== newVal) {
+            el.classList.toggle('closed', isClosed);
+            el.innerText = newVal;
+            if (isPlaceholder && wasClosed) {
+                announceWindowOpen(windowName);
+            } else if (!isPlaceholder && !isClosed) {
+                el.classList.add('new-call');
+                setTimeout(() => el.classList.remove('new-call'), 5000);
+                announceTicket(newVal, windowName);
+            }
+        }
+    }
+
+    function formatTimeRemaining(ms) {
+        if (ms <= 0) return 'Expired';
+        const totalSeconds = Math.floor(ms / 1000);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function renderWait(id, list, totalCount = 0) {
+        const container = document.getElementById(id);
+        if (!Array.isArray(list) || list.length === 0) {
+            container.innerHTML = '<div class="waiting-text">No pending tickets</div>';
+            return;
+        }
+        container.innerHTML = list.map(t => {
+            const label = id === 'wait-civ' ? formatCivilRegistrationLabel(t.label) : t.label;
+            return `
+                <div class="token-row ${t.isPriority ? 'priority' : ''}" role="listitem">
+                    <div class="token-label">${label}</div>
+                </div>
+            `;
+        }).join('');
+        if (totalCount > list.length) {
+            container.innerHTML += `<div class="waiting-more">+${totalCount - list.length} more waiting</div>`;
+        }
+    }
+
+    function renderRequeueList(id, list, totalCount = 0) {
+        const container = document.getElementById(id);
+        if (!Array.isArray(list) || list.length === 0) {
+            container.innerHTML = '<div class="waiting-text">No requeued tickets</div>';
+            return;
+        }
+        container.innerHTML = list.map(t => {
+            const label = id === 'requeue-civ' ? formatCivilRegistrationLabel(t.label) : t.label;
+            const remaining = formatTimeRemaining(600000 - (Date.now() - Number(t.requeueTime)));
+            return `
+                <div class="token-row ${t.isPriority ? 'priority' : ''}" role="listitem">
+                    <div class="token-label">${label}</div>
+                    <div class="token-timer" data-requeue-time="${t.requeueTime}">${remaining}</div>
+                </div>
+            `;
+        }).join('');
+        if (totalCount > list.length) {
+            container.innerHTML += `<div class="waiting-more">+${totalCount - list.length} more waiting</div>`;
+        }
+    }
+
+    function updateRequeueTimers() {
+        document.querySelectorAll('.token-timer[data-requeue-time]').forEach(el => {
+            const requeueTime = Number(el.dataset.requeueTime);
+            const remaining = formatTimeRemaining(600000 - (Date.now() - requeueTime));
+            el.innerText = remaining;
+        });
+    }
+
+    setInterval(updateRequeueTimers, 1000);
+
+    socket.on('queue_update', renderQueueState);
+    socket.on('active_users_list', renderActiveWindows);
+    socket.on('repeat_voice', (data) => {
+        if (data && data.ticketNumber) {
+            announceTicket(data.ticketNumber, data.windowName || 'Designated Window');
+        }
+    });
+    socket.on('connect', () => socket.emit('request_queue_update'));
+
+    updateTime();
+</script>
+</body>
+</html>

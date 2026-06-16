@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Queue - Login</title>
+    <link rel="icon" type="image/png" href="./res/PSA.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+           background: linear-gradient(135deg, rgba(15, 32, 39, 0.7), rgba(32, 58, 67, 0.7), rgba(44, 83, 100, 0.7)), url('./res/Philippine-Statistics-Authority-PSA.png') center / cover fixed;
+            color: #ffffff;  
+            overflow: hidden; 
+            position: relative;
+            animation: slideFadeIn 0.6s ease-out forwards;
+        }
+
+        @keyframes slideFadeIn {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- LIQUID BACKGROUND BLOBS --- */
+        .liquid-blob {
+            position: absolute;
+            filter: blur(60px);
+            z-index: 0;
+            opacity: 0.6;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+
+        .blob-1 {
+            width: 500px; height: 500px;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            top: -10%; left: 10%;
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            animation-delay: 0s;
+        }
+
+        .blob-2 {
+            width: 400px; height: 400px;
+            background: linear-gradient(135deg, #fceabb, #f8b500);
+            bottom: -5%; right: 15%;
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            animation-duration: 25s;
+        }
+
+        .blob-3 {
+            width: 300px; height: 300px;
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            top: 40%; left: 40%;
+            border-radius: 50% 50% 30% 70% / 50% 40% 60% 50%;
+            animation-duration: 18s;
+            animation-direction: reverse;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;}
+            33% { transform: translate(50px, -50px) rotate(90deg) scale(1.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;}
+            66% { transform: translate(-30px, 40px) rotate(180deg) scale(0.9); border-radius: 50% 50% 30% 70% / 50% 40% 60% 50%;}
+            100% { transform: translate(0, 0) rotate(360deg) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;}
+        }
+        
+        /* --- MAIN LAYOUT --- */
+        .layout-wrapper { display: flex; width: 100%; height: 100vh; padding: 40px 60px; position: relative; max-width: 1600px; margin: 0 auto; z-index: 2;}
+        
+        .brand-section { flex: 1.2; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 2; padding-left: 30px; margin-top: -90px;}
+        .brand-title { color: #ffffff; font-size: 5.5rem; font-weight: 900; line-height: 1; letter-spacing: -2px; margin-bottom: 5px; text-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .brand-subtitle { color: #e6c875; font-size: 2.5rem; font-weight: 300; letter-spacing: 1px; font-style: italic; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        
+        .footer-info { position: absolute; bottom: 30px; left: 60px; width: calc(100% - 120px); z-index: 2; display: flex; justify-content: space-between; align-items: flex-end;}
+        .footer-text { max-width: 600px; }
+        .footer-text p { color: rgba(255,255,255,0.7); font-size: 1rem; line-height: 1.4; font-weight: 400; }
+        .footer-links { text-align: right; font-size: 0.85rem; color: rgba(255,255,255,0.7); }
+        .footer-links a { color: rgba(255,255,255,0.9); text-decoration: none; margin-left: 15px; font-weight: 600; transition: color 0.3s;}
+        .footer-links a:hover { color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
+        
+        /* --- GLASSMORPHISM LOGIN CARD --- */
+        .login-section { flex: 1; display: flex; align-items: center; justify-content: flex-end; z-index: 2; padding-right: 40px; }
+        
+        .login-card { 
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%; max-width: 420px; padding: 45px 40px; 
+            border-radius: 30px; 
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.4);
+            border-left: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255,255,255,0.05); 
+            text-align: center; position: relative; overflow: hidden;
+        }
+
+        .login-card::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-20deg); animation: gloss 6s infinite ease-in-out;
+        }
+
+        @keyframes gloss { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+        
+        .login-card h2 { color: #ffffff; font-weight: 700; font-size: 2.2rem; margin-bottom: 35px; letter-spacing: -0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        
+        .input-group { margin-bottom: 22px; text-align: left; }
+        .input-label { display: block; font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-bottom: 8px; margin-left: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;}
+        .input-wrapper { position: relative; }
+        .input-wrapper .fa-envelope, .input-wrapper .fa-lock { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.6); font-size: 1.1rem; z-index: 5;}
+        
+        .input-group input { 
+            width: 100%; padding: 16px 45px 16px 50px; 
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 18px; 
+            font-size: 1rem; font-family: inherit; transition: all 0.3s ease; 
+            background: rgba(0, 0, 0, 0.2); color: #ffffff;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .input-group input:focus { 
+            border-color: rgba(255,255,255,0.6); outline: none; background: rgba(0, 0, 0, 0.3);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3), 0 0 15px rgba(255,255,255,0.1); 
+        }
+        .input-group input::placeholder { color: rgba(255,255,255,0.4); }
+
+        .forgot-link { display: block; font-size: 0.85rem; color: #00c6ff; text-decoration: none; margin-top: 5px; margin-bottom: 30px; cursor: pointer; text-align: right; font-weight: 600; transition: color 0.3s;}
+        .forgot-link:hover { color: #ffffff; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
+        
+        .btn-login { 
+            width: 100%; padding: 16px; 
+            background: rgba(255, 255, 255, 0.15); color: #ffffff; 
+            border: 1px solid rgba(255,255,255,0.3); border-radius: 18px; 
+            font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; 
+            display: block; backdrop-filter: blur(10px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2); margin-bottom: 15px; position: relative; z-index: 10;
+        }
+        .btn-login:hover { background: rgba(255, 255, 255, 0.25); transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.5);}
+        .btn-login:active { transform: translateY(1px); }
+        
+        .status-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 10px; font-weight: 700; min-height: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);}
+        
+        /* Glass Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { 
+            background: rgba(30, 45, 60, 0.7); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border-radius: 30px; padding: 40px; max-width: 420px; width: 90%; 
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(255,255,255,0.1); 
+            border: 1px solid rgba(255,255,255,0.2); color: #fff;
+        }
+        .modal-content h3 { color: #ffffff; font-size: 1.8rem; margin-bottom: 10px; font-weight: 700; }
+        .modal-content p { color: rgba(255,255,255,0.7); font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5; }
+        .modal-step { display: none; }
+        .modal-step.active { display: block; }
+        .modal-input { width: 100%; padding: 16px 20px; border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; font-size: 1rem; font-family: inherit; margin-bottom: 15px; transition: 0.3s; background: rgba(0,0,0,0.3); color: #fff; }
+        .modal-input:focus { border-color: #00c6ff; outline: none; background: rgba(0,0,0,0.5);}
+        .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btn { flex: 1; padding: 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px);}
+        .modal-btn.primary {  background: rgba(0, 198, 255, 0.2); color: #ffffff; border-color: rgba(0, 198, 255, 0.5); }
+        .modal-btn.primary:hover { background: rgba(0, 198, 255, 0.4); transform: translateY(-2px); }
+        .modal-btn.secondary { background: rgba(255, 255, 255, 0.05); color: #fff; }
+        .modal-btn.secondary:hover { background: rgba(255, 255, 255, 0.15); }
+        .modal-status { color: #ff6b6b; font-size: 0.85rem; margin-top: 10px; font-weight: 700; min-height: 18px; }
+        .modal-status.success { color: #38ef7d;  }
+        
+        @media (max-width: 900px) { 
+            .layout-wrapper { flex-direction: column; padding: 20px; } 
+            .login-section { justify-content: center; padding-right: 0; margin-top: 40px; } 
+            .brand-section { text-align: center; left: 0; width: 100%; padding: 0; } 
+            .footer-info { flex-direction: column; position: relative; bottom: 0; left: 0; width: 100%; text-align: center; margin-top: 40px; align-items: center; gap: 15px;}
+            .footer-links { text-align: center; }
+            .brand-title { font-size: 4rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="liquid-blob blob-1"></div>
+    <div class="liquid-blob blob-2"></div>
+    <div class="liquid-blob blob-3"></div>
+
+    <div id="forgotPasswordModal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="forgotStep1" class="modal-step active">
+                <h3>Forgot Password</h3>
+                <p>Enter your email address to receive a verification code.</p>
+                <input type="text" id="forgotEmail" class="modal-input" placeholder="Email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false">
+                <div id="forgotStep1Status" class="modal-status"></div>
+                <div class="modal-buttons">         
+                    <button id="btnSendCode" class="modal-btn primary">Send Code</button>
+                    <button id="btnCancelStep1" class="modal-btn secondary">Cancel</button>
+                </div>
+            </div>
+
+            <div id="forgotStepConfirmation" class="modal-step">
+                <h3 style="color: #38ef7d;">✓ Reset Email Sent</h3>
+                <p>A password reset link has been sent to your email address. Please check your inbox and spam folder to reset your password.</p>
+                <div class="modal-buttons">
+                    <button id="btnCloseConfirmation" class="modal-btn primary" style="flex: 1;">Close & Return to Login</button>
+                </div>
+            </div>
+
+            <div id="forgotStep2" class="modal-step">
+                <h3>Verify Code</h3>
+                <p>Enter the 6-digit code sent to your email.</p>
+                <input type="text" id="verificationCode" class="modal-input" placeholder="Enter 6-digit code" maxlength="6">
+                <div id="forgotStep2Status" class="modal-status"></div>
+                <div class="modal-buttons">
+                    <button id="btnVerifyCode" class="modal-btn primary">Verify Code</button>
+                    <button id="btnCancelStep2" class="modal-btn secondary">Cancel</button>
+                </div>
+            </div>
+
+            <div id="forgotStep3" class="modal-step">
+                <h3>Create New Password</h3>
+                <p>Enter your new password.</p>
+                <div style="position: relative; margin-bottom: 15px;">
+                    <input type="password" id="newPassword" class="modal-input" placeholder="New Password" style="padding-right: 40px; margin-bottom: 0;">
+                    <i class="fas fa-eye toggle-password" data-target="newPassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.6);"></i>
+                </div>
+                <div style="position: relative; margin-bottom: 15px;">
+                    <input type="password" id="confirmPassword" class="modal-input" placeholder="Confirm Password" style="padding-right: 40px; margin-bottom: 0;">
+                    <i class="fas fa-eye toggle-password" data-target="confirmPassword" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.6);"></i>
+                </div>
+                <div id="forgotStep3Status" class="modal-status"></div>
+                <div class="modal-buttons">
+                    <button id="btnUpdatePassword" class="modal-btn primary">Update Password</button>
+                    <button id="btnCancelStep3" class="modal-btn secondary">Cancel</button>
+                </div>
+            </div>
+
+            <div id="forgotStep4" class="modal-step">
+                <h3 style="color: #38ef7d;">✓ Password Reset</h3>
+                <p>Your password has been successfully updated. You can now log in with your new password.</p>
+                <div class="modal-buttons">
+                    <button id="btnCloseModal" class="modal-btn primary" style="flex: 1;">Back to Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="loginSuccessModal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <h3 style="color: #38ef7d; font-size: 2.5rem; margin-bottom: 15px;">
+                <i class="fas fa-check-circle"></i>
+            </h3>
+            <h3 style="margin-bottom: 10px;">Success</h3>
+            <p id="successModalMessage" style="font-size: 1.1rem; color: rgba(255,255,255,0.9); margin-bottom: 0;">Account successfully logged in.</p>
+            <p style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 20px;">Redirecting to dashboard...</p>
+        </div>
+    </div>
+
+    <div class="layout-wrapper">
+        <div class="brand-section">
+            <img src="./res/PSA.png" alt="PSA Logo" class="mini-logo" style="width: 140px; height: auto; margin-bottom: -10px; display: block; margin-left: -20px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));">
+            <h1 class="brand-title">Philippine<br>Statistics<br>Authority</h1>
+            <h2 class="brand-subtitle">Queueing System</h2>
+        </div>
+
+        <div class="login-section">
+            <div class="login-card">
+                <div id="loginForm">
+                    <h2>Log in</h2>
+                    <form id="loginFormSubmit" novalidate>
+                        <div class="input-group">
+                            <label class="input-label">Email</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-envelope"></i>
+                                <input type="text" id="loginEmail" required placeholder="Enter your email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Password</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-lock"></i>
+                                <input type="password" id="loginPass" required placeholder="Enter your password" autocomplete="current-password">
+                                <i class="fas fa-eye-slash toggle-password" data-target="loginPass" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); cursor: pointer; color: rgba(255,255,255,0.4); z-index: 5;"></i>
+                            </div>
+                        </div>
+                        
+                        <a href="#" id="linkForgot" class="forgot-link">Forgot Password?</a>
+                        
+                        <button type="submit" id="btnLogin" class="btn-login">Login</button>
+                    </form>
+                    
+                    <div id="loginStatus" class="status-msg"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer-info">
+        <div class="footer-text">
+            <p>We provide statistics, civil registration, and identification services for sustainable, innovative, and inclusive development.</p>
+        </div>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="https://www.facebook.com/psa3Bulacan">Contact Us</a>
+            <span style="margin-left: 15px;">&copy; 2024 Philippine Statistics Authority</span>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
+            authDomain: "queue-project-login.firebaseapp.com",
+            projectId: "queue-project-login",
+            storageBucket: "queue-project-login.firebasestorage.app",
+            messagingSenderId: "869956656004",
+            appId: "1:869956656004:web:3d2a98bea880c701605bd1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()); }
+        function validatePassword(password) {
+            if (password.length < 8) return "Password must be at least 8 characters long.";
+            if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+            if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter.";
+            if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return "Password must contain at least one special character.";
+            return null;
+        }
+
+        async function logAuthActivity(action, email) {
+            try {
+                await fetch('/api/log-auth', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action, email: email })
+                });
+            } catch (error) { console.error("Could not record log:", error); }
+        }
+
+        async function attemptLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const status = document.getElementById('loginStatus');
+            const btnLogin = document.getElementById('btnLogin');
+            if (!email || !pass) return status.innerText = "Please fill in all fields.";
+
+            btnLogin.disabled = true;
+            status.innerText = '';
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+                const userEmail = userCredential.user.email;
+                const response = await fetch('/api/get-role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userEmail }) });
+                const data = await response.json();
+
+                if (data.role === 'banned') {
+                    await signOut(auth);
+                    status.innerText = "This account has been removed by an Admin.";
+                    btnLogin.disabled = false;
+                    return;
+                }
+
+                await logAuthActivity('USER_LOGIN', userEmail);
+                localStorage.setItem('psa_admin_token', userEmail);
+                localStorage.setItem('psa_role', data.role);
+                const targetUrl = data.role === 'admin' ? "admin_dashboard.html" : "queue-control.html";
+                
+                document.getElementById('successModalMessage').innerText = 'Account successfully logged in.';
+                document.getElementById('loginSuccessModal').classList.add('active');
+
+                setTimeout(() => {
+                    const transitionLink = document.createElement('a');
+                    transitionLink.href = targetUrl;
+                    document.body.appendChild(transitionLink);
+                    transitionLink.click();
+                }, 2000);
+
+            } catch (error) {
+                status.innerText = "Invalid email or password.";
+                btnLogin.disabled = false;
+            }
+        }
+
+        document.getElementById('loginFormSubmit').addEventListener('submit', (e) => {
+            e.preventDefault();
+            attemptLogin();
+        });
+
+        document.getElementById('loginEmail').addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value;
+            const status = document.getElementById('loginStatus');
+            if (!email) { status.innerText = "Please enter your email."; return; }
+            if (!isValidEmail(email)) { status.innerText = "Please enter a valid email address."; return; }
+            status.innerText = '';
+            if (pass) { attemptLogin(); } else { document.getElementById('loginPass').focus(); }
+        });
+        
+        document.getElementById('loginPass').addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            attemptLogin();
+        });
+
+        const forgotModal = document.getElementById('forgotPasswordModal');
+        let resetEmail = '';
+
+        function openForgotModal() { forgotModal.classList.add('active'); }
+        function closeForgotModal() {
+            forgotModal.classList.remove('active');
+            resetForgotModal();
+        }
+
+        function resetForgotModal() {
+            document.getElementById('forgotStep1').classList.add('active');
+            document.getElementById('forgotStep2').classList.remove('active');
+            document.getElementById('forgotStep3').classList.remove('active');
+            document.getElementById('forgotStep4').classList.remove('active');
+            if (document.getElementById('forgotStepConfirmation')) document.getElementById('forgotStepConfirmation').classList.remove('active');
+
+            document.getElementById('forgotEmail').value = '';
+            document.getElementById('verificationCode').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('forgotStep1Status').innerText = '';
+            document.getElementById('forgotStep2Status').innerText = '';
+            document.getElementById('forgotStep3Status').innerText = '';
+            resetEmail = '';
+        }
+
+        function goToStep2() { document.getElementById('forgotStep1').classList.remove('active'); document.getElementById('forgotStep2').classList.add('active'); }
+        function goToStep3() { document.getElementById('forgotStep2').classList.remove('active'); document.getElementById('forgotStep3').classList.add('active'); }
+        function goToStep4() { document.getElementById('forgotStep3').classList.remove('active'); document.getElementById('forgotStep4').classList.add('active'); }
+
+        document.getElementById('linkForgot').addEventListener('click', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            if (!email) {
+                document.getElementById('loginStatus').innerText = "Please enter your email first.";
+                return;
+            }
+            document.getElementById('forgotEmail').value = email;
+            openForgotModal();
+        });
+
+        document.getElementById('btnSendCode').addEventListener('click', async () => {
+            const email = document.getElementById('forgotEmail').value;
+            const status = document.getElementById('forgotStep1Status');
+
+            if (!email) { status.innerText = "Please enter your email."; return; }
+
+            status.classList.remove('success');
+            status.innerText = "Sending password reset email...";
+            
+            try {
+                await sendPasswordResetEmail(auth, email);
+                document.getElementById('forgotStep1').classList.remove('active');
+                document.getElementById('forgotStepConfirmation').classList.add('active');
+            } catch (error) {
+                status.classList.remove('success');
+                status.innerText = error.message.replace("Firebase: ", "");
+            }
+        });
+
+        document.getElementById('btnCloseConfirmation').addEventListener('click', closeForgotModal);
+        document.getElementById('btnCancelStep1').addEventListener('click', closeForgotModal);
+        document.getElementById('btnCancelStep2').addEventListener('click', closeForgotModal);
+        document.getElementById('btnCancelStep3').addEventListener('click', closeForgotModal);
+        document.getElementById('btnCloseModal').addEventListener('click', closeForgotModal);
+        
+        forgotModal.addEventListener('click', (e) => {
+            if (e.target === forgotModal) closeForgotModal();
+        });
+
+        document.querySelectorAll('.toggle-password').forEach(icon => {
+            icon.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    this.classList.remove('fa-eye-slash');
+                    this.classList.add('fa-eye');
+                } else {
+                    input.type = 'password';
+                    this.classList.remove('fa-eye');
+                    this.classList.add('fa-eye-slash');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

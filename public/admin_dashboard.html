@@ -1,0 +1,2352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Queue - Admin Dashboard</title>
+    <link rel="icon" type="image/png" href="./res/PSA.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+
+    /* ==========================================================================
+   Global Variables & Base Reset
+   ========================================================================== */
+
+:root {
+
+    /* Colors */
+
+    --primary: #0d6efd;
+    --psa-blue: #134299;
+    --psa-light-blue: #0d6efd;
+    --sidebar-bg: #1e293b;
+    --text-muted: #64748b;
+    --text-dark: #0f172a;
+    --white: #ffffff;
+    
+    /* Glassmorphism */
+
+    --glass-bg: rgba(255, 255, 255, 0.45);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    
+    /* Shadows & Transitions */
+
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 12px 40px 0 rgba(0, 0, 0, 0.12);
+    --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+
+}
+
+* {
+
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    
+}
+
+body {
+    background: linear-gradient(135deg, rgba(1, 61, 129, 0.25), rgba(7, 112, 233, 0.25)), url('/res/Philippine-Statistics-Authority-PSA.png') center / cover fixed;
+    color: var(--text-dark);
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   Dashboard Layout & Sidebar
+   ========================================================================== */
+
+.dashboard { display: flex; min-height: 100vh; }
+.main-area { flex: 1; position: relative; padding-left: 70px; transition: padding-left var(--transition-base); }
+
+.sidebar { 
+    width: 70px; 
+    height: 100vh; 
+    background: #0e3275; 
+    display: flex; 
+    flex-direction: column; 
+    transition: width var(--transition-base); 
+    padding: 1.5rem 0.5rem; 
+    position: fixed; 
+    top: 0; left: 0; z-index: 1200; 
+}
+.sidebar.expanded { width: 340px; }
+.sidebar.expanded + .main-area { padding-left: 340px; }
+
+.toggle-btn { display: flex; align-items: center; padding: 10px; cursor: pointer; color: var(--white); font-size: 1.5rem; margin-bottom: 2rem; }
+.menu-label { font-size: 1.1rem; font-weight: 700; margin-left: 15px; display: none; }
+.sidebar-menu { display: flex; flex-direction: column; gap: 0.35rem; }
+
+.sidebar-icon { 
+    display: flex; align-items: center; padding: 12px; margin: 4px 0; 
+    border-radius: 8px; color: #94a3b8; cursor: pointer; 
+    transition: background-color var(--transition-base), color var(--transition-base); 
+    overflow: hidden; 
+}
+.sidebar-icon i { font-size: 1.4rem; min-width: 40px; }
+.sidebar-icon:hover, .sidebar-icon.active { background: var(--primary); color: var(--white); }
+
+.nav-text { opacity: 0; white-space: nowrap; transition: opacity 0.2s ease; }
+.sidebar.expanded .nav-text { opacity: 1; margin-left: 10px; }
+.sidebar.expanded .menu-label { display: block; }
+
+.section { display: none; animation: fadeIn 0.4s ease-out; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==========================================================================
+   Navbar Elements
+   ========================================================================== */
+
+.navbar { 
+    background: #134299; color: var(--white); padding: 10px 30px; 
+    display: flex; justify-content: space-between; align-items: center; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; 
+}
+.navbar-logo-section { display: flex; align-items: center; gap: 15px; }
+.navbar h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.5px; }
+.navbar h2 { font-size: 0.9rem; opacity: 0.8; }
+
+.hamburger-menu { background: none; border: none; color: var(--white); font-size: 1.5rem; cursor: pointer; padding: 5px 10px; transition: transform 0.2s ease; }
+.hamburger-menu:hover { transform: scale(1.1); }
+
+.btn-logout { background: #e74c3c; color: var(--white); border: none; padding: 10px 20px; border-radius: 5px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; }
+.btn-logout:hover { background: #c0392b; }
+
+/* ==========================================================================
+   Dashboard Cards & Forms
+   ========================================================================== */
+
+.container { max-width: 900px; margin: 40px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+.card { 
+    background: rgba(248, 250, 252, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); 
+    border-radius: 15px; padding: 30px; border-top: 5px solid #1a428a; 
+    box-shadow: inset 0 -2px 0 #e2e8f0, var(--shadow-sm); 
+}
+.card.danger-card { border-top-color: #e74c3c; }
+.card.warning-card { border-top-color: #e67e22; }
+.info-card { border-top-color: #27ae60; grid-column: 1 / -1; } 
+.card h2 { font-size: 1.3rem; margin-bottom: 20px; color: #1a428a; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+.input-group { margin-bottom: 20px; }
+.input-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; color: #444; }
+.input-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; }
+
+.btn-action { width: 100%; padding: 12px; color: var(--white); border: none; border-radius: 5px; font-weight: 700; cursor: pointer; transition: background-color 0.2s ease; margin-bottom: 10px; }
+.btn-kick { background: #e67e22; } .btn-kick:hover { background: #d35400; }
+.btn-ban { background: #e74c3c; } .btn-ban:hover { background: #c0392b; }
+.btn-role { background: #369baf; } .btn-role:hover { background: #2a7a8a; }
+.btn-sys { background: #333; } .btn-sys:hover { background: #000; }
+
+.status-msg { font-size: 0.85rem; font-weight: 600; min-height: 15px; }
+.text-success { color: #27ae60; } .text-error { color: #e74c3c; }
+
+/* ==========================================================================
+   User Lists
+   ========================================================================== */
+
+.user-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px; }
+.user-list li { 
+    padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; 
+    border-radius: 8px; display: flex; flex-direction: column; gap: 6px; color: #334155; 
+}
+.user-list .user-header { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+.user-list .user-location { font-size: 0.85rem; color: var(--text-muted); margin-left: 24px; }
+.online-dot { width: 12px; height: 12px; background: #2ecc71; border-radius: 50%; box-shadow: 0 0 8px rgba(46, 204, 113, 0.6); animation: pulse 2s infinite; flex-shrink: 0; }
+@keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(46, 204, 113, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+
+/* ==========================================================================
+   Modals
+   ========================================================================== */
+   
+.modal-overlay { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); 
+    display: flex; justify-content: center; align-items: center; z-index: 9999; 
+    opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease; 
+}
+.modal-overlay.active { opacity: 1; visibility: visible; }
+.modal-box { 
+    background: #1a1f3a; border: 1px solid rgba(100, 100, 150, 0.25); backdrop-filter: blur(20px); 
+    border-radius: 28px; padding: 40px; text-align: center; max-width: 560px; width: 90%; 
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4); 
+    transform: scale(0.95); transition: transform 0.25s ease, opacity 0.25s ease; display: grid; gap: 24px; position: relative; 
+}
+.modal-overlay.active .modal-box { transform: scale(1); opacity: 1; }
+
+.modal-close-btn { 
+    position: absolute; top: 18px; right: 18px; width: 38px; height: 38px; 
+    border: none; border-radius: 50%; background: rgba(255, 255, 255, 0.1); color: #ffffff; 
+    font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s ease; 
+}
+.modal-close-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.modal-icon { width: 66px; height: 66px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #ef4444; display: grid; place-items: center; font-size: 2rem; margin: 0 auto; }
+.modal-logo-icon { width: 84px; height: 84px; object-fit: contain; margin: 0 auto 24px; display: block; }
+.modal-box .modal-title { font-size: 1.5rem; font-weight: 700; margin: 0; color: #ffffff; text-align: center; }
+.modal-text { color: #cbd5e1; margin: 0; font-size: 0.95rem; line-height: 1.85; }
+
+.modal-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.modal-btn { min-width: 120px; padding: 12px 28px; border-radius: 999px; font-weight: 700; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; font-size: 0.95rem; color: var(--white); border: none; }
+.btn-cancel { background: #f1f5f9; color: #0f172a; box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08); }
+.btn-confirm { background: #ef4444; }
+.modal-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3); }
+
+/* ==========================================================================
+   About Us Section (Glass Design)
+   ========================================================================== */
+.about-section-container { width: 100%; max-width: 1300px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 40px; position: relative; justify-items: start; padding-left: 40px; }
+.main-title-wrapper { justify-self: start; width: fit-content; margin-left: 0; text-align: left; }
+.main-title-wrapper h1 { font-size: 2.8rem; color: var(--psa-blue); font-weight: 800; letter-spacing: -1px; text-transform: uppercase; line-height: 1.1; }
+.main-title-wrapper .title-bar { width: 60px; height: 5px; background: #ffd700; margin-top: 12px; border-radius: 4px; }
+
+.modal-blur-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px);
+    display: flex; justify-content: center; align-items: center; z-index: 9999;
+    opacity: 0; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.modal-blur-overlay.active { opacity: 1; visibility: visible; }
+
+.modal-glass-container {
+    background: #1a1f3a; border: 1px solid rgba(100, 100, 150, 0.25); backdrop-filter: blur(20px);
+    border-radius: 28px; padding: 40px; text-align: center; max-width: 560px; width: 90%;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+    transform: scale(0.95); transition: transform 0.25s ease; display: grid; gap: 20px; position: relative;
+}
+.modal-blur-overlay.active .modal-glass-container { transform: scale(1); }
+
+#modal-payload-space {
+    text-align: center;
+}
+
+#modal-payload-space i {
+    width: 66px; height: 66px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); 
+    color: #ef4444; display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 16px;
+}
+
+#modal-payload-space h3 {
+    font-size: 1.5rem; font-weight: 700; margin: 0 0 12px 0; color: #ffffff;
+}
+
+#modal-payload-space p {
+    color: #cbd5e1; margin: 0; font-size: 0.95rem; line-height: 1.85;
+}
+
+.premium-glass-card { 
+    background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); 
+    border: 1px solid var(--glass-border); border-radius: 24px; padding: 30px; box-shadow: var(--shadow-sm); 
+    transition: transform var(--transition-smooth), background-color var(--transition-smooth), box-shadow var(--transition-smooth); 
+    color: var(--text-dark); position: relative; overflow: hidden; 
+}
+.premium-glass-card::before { content: ''; position: absolute; top: 0; left: -50%; width: 100%; height: 100%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 100%); transform: skewX(-25deg); transition: left 0.75s ease; pointer-events: none; }
+.premium-glass-card:hover::before { left: 125%; }
+.premium-glass-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); background: rgba(255, 255, 255, 0.55); border-color: rgba(255, 255, 255, 0.6); }
+.premium-glass-card p { font-size: 0.88rem; line-height: 1.6; color: var(--text-muted); }
+
+.left-column { display: flex; flex-direction: column; gap: 30px; }
+.about-intro-card p { font-size: 0.92rem; line-height: 1.7; color: var(--text-muted); text-align: justify; }
+
+.personality-card h2 { font-size: 1.1rem; text-transform: uppercase; color: var(--psa-blue); letter-spacing: 1px; margin-bottom: 25px; font-weight: 700; border-left: 4px solid var(--psa-light-blue); padding-left: 10px; }
+.prism-stack { display: flex; flex-direction: column; gap: 16px; }
+.prism-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; transition: background-color var(--transition-smooth); }
+.prism-row:hover { background: rgba(255, 255, 255, 0.3); }
+.prism-letter { font-size: 2.2rem; font-weight: 900; color: var(--psa-blue); width: 35px; text-align: center; }
+.prism-text { font-size: 0.95rem; font-weight: 600; color: var(--text-dark); margin-left: -4px; }
+
+.right-workspace { display: flex; flex-direction: column; justify-content: center; gap: 35px; }
+.center-showcase-layout { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: auto; gap: 30px; align-items: start; }
+.center-showcase-layout .premium-glass-card { width: 100%; min-width: 0; }
+
+.clickable-action-card { cursor: pointer; }
+.card-header-node { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.card-header-node h3 { font-size: 1.25rem; font-weight: 700; color: var(--psa-blue); }
+
+.icon-circle-badge { 
+    width: 48px; height: 48px; border-radius: 14px; background: rgba(255, 255, 255, 0.6); 
+    display: flex; align-items: center; justify-content: center; 
+    box-shadow: inset 0 2px 6px rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.5); 
+    transition: transform var(--transition-smooth), background-color var(--transition-smooth); overflow: hidden; 
+}
+.icon-circle-badge i { font-size: 1.3rem; color: var(--psa-blue); transition: color var(--transition-smooth); }
+.PSAlogo-card .icon-circle-badge { background: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.75); }
+.PSAlogo-card .icon-circle-badge img { width: 100%; height: 100%; object-fit: contain; }
+.clickable-action-card:hover .icon-circle-badge { background: var(--psa-blue); transform: scale(1.05); }
+.clickable-action-card:hover .icon-circle-badge i { color: #ffffff; }
+
+.core-values-section { display: flex; flex-direction: column; gap: 15px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 28px; padding: 26px; box-shadow: var(--shadow-sm); backdrop-filter: blur(18px); overflow: hidden; } 
+.section-label { font-size: 1.05rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: var(--psa-blue); opacity: 0.95; margin-bottom: 15px; }
+.values-grid-layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+.value-accent-card { --accent-glow: #0d6efd; border-top: 4px solid var(--accent-glow); }
+.value-accent-card:hover { box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08), 0 0 20px rgba(13, 110, 253, 0.25); transform: translateY(-8px); }
+.value-accent-card .icon-circle-badge i { color: var(--accent-glow); }
+.value-accent-card:hover .icon-circle-badge { background: var(--accent-glow); }
+
+/* ==========================================================================
+   Settings & Toggles
+   ========================================================================== */
+.settings-list { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+.setting-item { 
+    display: flex; align-items: center; background: rgba(255, 255, 255, 0.6); 
+    padding: 15px 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.5); 
+    transition: background-color var(--transition-base), transform var(--transition-base), box-shadow var(--transition-base); 
+}
+.setting-item:hover { background: rgba(255, 255, 255, 0.9); box-shadow: 0 4px 12px rgba(0,0,0,0.05); transform: translateX(4px); }
+.setting-icon { width: 45px; height: 45px; border-radius: 10px; background: rgba(13, 110, 253, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-right: 15px; flex-shrink: 0; }
+.setting-details { flex: 1; text-align: left; }
+.setting-details h4 { margin: 0 0 4px 0; color: #000; font-size: 1.05rem; }
+.setting-details p { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+
+.setting-signout { background: #e74c3c; color: var(--white); border: none; padding: 10px 20px; border-radius: 5px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease; margin-left: 15px; }
+.setting-signout:hover { background: #c0392b; }
+
+.toggle-switch { position: relative; display: inline-block; width: 46px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 24px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: var(--white); transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: #27ae60; }
+input:checked + .slider:before { transform: translateX(22px); }
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+@media (max-width: 1100px) { 
+    .about-section-container, .center-showcase-layout, .values-grid-layout { grid-template-columns: 1fr; } 
+    .logo-vault { order: -1; max-width: 300px; margin: 0 auto; } 
+}
+@media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   Dark Theme Overrides (Applied when `dark-theme` is added to `<body>`)
+   ========================================================================== */
+body.dark-theme { 
+    color: #e2e8f0; 
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(30, 41, 59, 0.85)), url('./res/PSA-dark-bg.jpg') center / cover fixed; 
+}
+
+.dark-theme .main-area p,
+.dark-theme .main-area ul,
+.dark-theme .main-area li,
+.dark-theme .main-area span,
+.dark-theme .main-area label,
+.dark-theme .main-area td,
+.dark-theme .main-area th,
+.dark-theme .main-area h1,
+.dark-theme .main-area h2,
+.dark-theme .main-area h3,
+.dark-theme .main-area h4,
+.dark-theme .main-area h5,
+.dark-theme .main-area h6,
+.dark-theme .main-area input,
+.dark-theme .main-area select,
+.dark-theme .main-area button { 
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .online-users-card, .dark-theme .logs-card, .dark-theme .danger-zone, .dark-theme .card, .dark-theme .content-card { 
+    background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(59, 130, 246, 0.28); 
+    box-shadow: 0 14px 34px rgba(2, 6, 23, 0.55); color: #e5e7eb; 
+}
+
+.dark-theme h2, .dark-theme h3, .dark-theme h4, .dark-theme .section-title, .dark-theme .main-title-wrapper h1 { color: #e5e7eb; }
+.dark-theme .main-title-wrapper h1, .dark-theme .core-values-section .section-label, .dark-theme .prism-row .prism-letter { color: #ffffff; }
+.dark-theme .prism-row .prism-text, .dark-theme .text-muted, .dark-theme .muted, .dark-theme .subtext { color: #cbd5e1; }
+
+/* Force text readability against inline styles in cards */
+.dark-theme .card > p,
+.dark-theme .card > ul,
+.dark-theme .card > ul > li { color: #cbd5e1 !important; }
+
+/* Fix Active Users List */
+.dark-theme .user-list li { background: rgba(15, 23, 42, 0.55) !important; border-color: rgba(148, 163, 184, 0.25) !important; color: #cbd5e1 !important; }
+.dark-theme .user-list .user-header span { color: #e2e8f0 !important; }
+.dark-theme .user-list li[style] { color: #cbd5e1 !important; }
+
+.dark-theme .setting-item { background: rgba(255, 255, 255, 0.12); border-color: rgba(148, 163, 184, 0.25); }
+.dark-theme .setting-item:hover { background: rgba(255, 255, 255, 0.18); }
+.dark-theme .setting-details h4 { color: #e2e8f0 !important; }
+.dark-theme .setting-details p { color: #cbd5e1 !important; }
+.dark-theme .setting-item:hover .setting-details h4, .dark-theme .setting-item:hover .setting-details p { color: #ffffff !important; }
+
+.dark-theme .logs-table-wrapper, .dark-theme .table-container { background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 10px; }
+.dark-theme table { background: transparent; color: #e2e8f0; }
+.dark-theme thead th { background: #1e40af; color: #eaf2ff; border-bottom: 1px solid rgba(148, 163, 184, 0.35); }
+.dark-theme .logs-table-scroll { background: #0f172a; border-color: rgba(148, 163, 184, 0.25); }
+.dark-theme .logs-table-scroll thead th { background: #1e40af; color: #eaf2ff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35); }
+.dark-theme .logs-table-scroll--user thead th { background: #166534; }
+.dark-theme #logsTableBody td, .dark-theme #userLogsTableBody td, .dark-theme #accountsTableBody td { color: #e2e8f0; background: rgba(15, 23, 42, 0.55); }
+.dark-theme .logs-table-scroll table th,
+.dark-theme .logs-table-scroll table td,
+.dark-theme .logs-table-scroll table tr,
+.dark-theme #logsTableBody tr[style] td,
+.dark-theme #userLogsTableBody tr[style] td,
+.dark-theme #accountsTableBody tr[style] td { color: #e2e8f0 !important; }
+.dark-theme tbody tr:hover td { background: rgba(30, 41, 59, 0.65); }
+.dark-theme td[colspan] { color: #cbd5e1 !important; }
+.dark-theme #ticketLogsPageInfo,
+.dark-theme #userLogsPageInfo,
+.dark-theme .status-msg,
+.dark-theme .modal-box .input-group label,
+.dark-theme .modal-box h2,
+.dark-theme .modal-box p { color: #e2e8f0 !important; }
+
+.dark-theme input, .dark-theme select { background: rgba(15, 23, 42, 0.92); color: #e2e8f0; border: 1px solid rgba(148, 163, 184, 0.45); }
+.dark-theme .input-group label { color: #cbd5e1 !important; }
+
+.dark-theme .btn-primary, .dark-theme .btn-download, .dark-theme .btn-next, .dark-theme .btn-prev { background: #2563eb; color: var(--white); border-color: #2563eb; }
+.dark-theme .btn-primary:hover, .dark-theme .btn-download:hover, .dark-theme .btn-next:hover, .dark-theme .btn-prev:hover { background: #1d4ed8; }
+.dark-theme .btn-danger, .dark-theme .delete-btn, .dark-theme .reset-btn { background: #dc2626; color: var(--white); border-color: #dc2626; }
+.dark-theme .btn-danger:hover, .dark-theme .delete-btn:hover, .dark-theme .reset-btn:hover { background: #b91c1c; }
+
+.dark-theme .page-info, .dark-theme .pagination { color: #cbd5e1; }
+.dark-theme .modal-glass-container, .dark-theme .modal-box { background: rgba(15, 23, 42, 0.95) !important; border-color: rgba(148, 163, 184, 0.25) !important; color: #e2e8f0; }
+.dark-theme .modal-box .modal-title { color: #f8fafc !important; }
+.dark-theme .modal-box .modal-text, .dark-theme .modal-box label { color: #cbd5e1 !important; }
+.dark-theme .role-badge,
+.dark-theme .status-badge {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(226, 232, 240, 0.12) !important;
+}
+.dark-theme .modal-close-btn { background: rgba(255, 255, 255, 0.1); color: #e2e8f0; }
+.dark-theme .modal-close-btn:hover { background: rgba(255, 255, 255, 0.2); color: #ffffff; }
+.dark-theme #privIpAddress { color: #e2e8f0 !important; background: rgba(0,0,0,0.2) !important; }
+.dark-theme #privDeviceList { background: rgba(0,0,0,0.2) !important; border-color: rgba(148, 163, 184, 0.25) !important; }
+.dark-theme .device-session-item strong { color: #e2e8f0 !important; }
+.dark-theme .device-session-item div { color: #cbd5e1 !important; }
+.dark-theme .device-session-item span { background: rgba(255,255,255,0.1) !important; }
+.dark-theme #modal-payload-space h3 { color: #60a5fa; }
+.dark-theme #modal-payload-space p { color: #cbd5e1; }
+
+html.dark-theme,
+html.dark-theme body {
+    background-color: #0f172a !important;
+    color: #e2e8f0;
+}
+ </style>
+    <script>
+        (function () {
+            if (localStorage.getItem('psa_dark_mode') === 'enabled') {
+                document.documentElement.classList.add('dark-theme');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="dashboard">
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="toggle-btn" id="toggleBtn">
+                    <i class="bx bx-menu"></i>
+                    <span class="menu-label">Menu</span>
+                </div>
+            </div>
+            <div class="sidebar-menu">
+                <div class="sidebar-icon active" data-section="home">
+                    <i class="bx bx-home"></i>
+                    <span class="nav-text">Home</span>
+                </div>
+                <div class="sidebar-icon" data-section="dashboard" id="dashboardLink">
+                    <i class="bx bx-grid-alt"></i>
+                    <span class="nav-text">Dashboard</span>
+                </div>
+                <div class="sidebar-icon" data-section="createusers" id="createUsersLink">
+                    <i class="bx bx-user-plus"></i>
+                    <span class="nav-text">Create Account</span>
+                </div>
+                <div class="sidebar-icon" data-section="controls">
+                    <i class="bx bx-user-check"></i>
+                    <span class="nav-text">Session Control</span>
+                </div>
+                <div class="sidebar-icon" data-section="logs">
+                    <i class="bx bx-book"></i>
+                    <span class="nav-text">System Control and Logs</span>
+                </div>
+                <div class="sidebar-icon" data-section="analytics">
+                    <i class="bx bx-bar-chart"></i>
+                    <span class="nav-text">System User Accounts Logs</span>
+                </div>
+                <div class="sidebar-icon" data-section="settings">
+                    <i class="bx bx-cog"></i>
+                    <span class="nav-text">Settings</span>
+                </div>
+                <div class="sidebar-icon" data-section="about">
+                    <i class="bx bx-info-circle"></i>
+                    <span class="nav-text">About Us</span>
+                </div>
+            </div>
+        </nav>
+        <div class="main-area">
+            <div class="navbar">
+                <div class="navbar-logo-section">
+                    <img id="psaLogo" src="/res/PSA.png" alt="PSA Logo" height="60" style="cursor: pointer;">
+                    <div>
+                        <h1>Philippine Statistics Authority</h1>
+                        <h2>Admin Dashboard</h2>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <span id="adminEmailDisplay" style="font-size: 0.9rem; opacity: 0.8;"></span>
+                    <button id="btnLogout" class="btn-logout">Sign Out</button>
+                </div>
+            </div>
+        
+            <section id="homeSection" class="section active">
+                <div class="container">
+                    <div class="card info-card">
+                        <h2>Currently Online</h2>
+                        <ul id="activeUsersContainer" class="user-list"><li style="color: #888; font-weight: normal; ">Loading active users...</li></ul>
+                    </div>
+                    <div class="card info-card">
+                        <h2>PSA Queuing System Overview</h2>
+                        <p style="font-size: 0.95rem; color: #4b5563; margin-bottom: 16px; line-height: 1.7;">This dashboard centralizes queue management for the Philippine Statistics Authority. Monitor ticket progress, prioritize service counters, and ensure faster client flow across civil registration and national ID transactions.</p>
+                        <ul style="list-style: none; padding-left: 0; color: #334155; font-size: 0.94rem; line-height: 1.8;">
+                            <li style="margin-bottom: 10px;"><i class="fas fa-check-circle" style="color: #0d6efd; margin-right: 10px;"></i>Real-time queue insights for every service lane.</li>
+                            <li style="margin-bottom: 10px;"><i class="fas fa-check-circle" style="color: #0d6efd; margin-right: 10px;"></i>Department-specific ticket tracking for Civil Registration and National ID.</li>
+                            <li style="margin-bottom: 10px;"><i class="fas fa-check-circle" style="color: #0d6efd; margin-right: 10px;"></i>Smart controls to manage sessions, reset queues, and maintain operational flow.</li>
+                            <li><i class="fas fa-check-circle" style="color: #0d6efd; margin-right: 10px;"></i>Designed to support efficient, transparent service delivery for PSA staff and clients.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="controlsSection" class="section">
+                <div class="container">
+                    <div class="card warning-card">
+                        <h2>Active Session Control</h2>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Instantly force a user to log out.</p>
+                        <div class="input-group"><input type="email" id="kickEmail" placeholder="staff@psa.gov.ph"></div>
+                        <button id="btnKick" class="btn-action btn-kick">Kick User</button>
+                        <div id="kickStatus" class="status-msg text-success"></div>
+                    </div>
+                    <div class="card danger-card">
+                        <h2>Account Access Control</h2>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Permanently ban or promote staff.</p>
+                        <div class="input-group"><input type="email" id="accessEmail" placeholder="staff@psa.gov.ph"></div>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="btnBan" class="btn-action btn-ban" style="flex: 1;">Ban User</button>
+                            <button id="btnMakeAdmin" class="btn-action btn-role" style="flex: 1;">Make Admin</button>
+                        </div>
+                        <div id="accessStatus" class="status-msg"></div>
+                    </div>
+
+                    <!-- NEW: Created Accounts Container -->
+                    <div class="card info-card" style="grid-column: 1 / -1; margin-top: 10px;">
+                        <h2>Created Accounts</h2>
+                        <div style="overflow-x: auto; max-height: 400px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #e2e8f0;">
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #134299; color: white; z-index: 10;">Email Address</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #134299; color: white; z-index: 10;">Role</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #134299; color: white; z-index: 10; text-align: center;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accountsTableBody">
+                                    <tr><td colspan="3" style="padding: 20px; text-align: center; color: #888;">Loading accounts...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="logsSection" class="section">
+                <div class="container" style="max-width: 1100px;">
+                    <div class="card" style="grid-column: 1 / -1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2>Queue Ticket Logs</h2>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <select id="ticketLogDeptFilter" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: 'Inter', sans-serif;">
+                                    <option value="">All Departments</option>
+                                    <option value="national">National ID</option>
+                                    <option value="civil">Civil Registration</option>
+                                </select>
+                                <input type="date" id="ticketLogDateFilter" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: 'Inter', sans-serif;">
+                                <button id="btnDownloadLogs" class="btn-action" style="max-width: 200px; margin-bottom: 0; background: #27ae60;">
+                                    <i class="fas fa-file-download" style="margin-right: 8px;"></i>Download CSV
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="logs-table-scroll" style="overflow-x: auto; overflow-y: auto; max-height: 400px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                                <thead>
+                                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #3894f0; z-index: 10;">Timestamp</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #3894f0; z-index: 10;">Customer Type</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #3894f0; z-index: 10;">Department</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #3894f0; z-index: 10;">Ticket ID</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #3894f0; z-index: 10;">Windows</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #3894f0; z-index: 10;">Status</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #3894f0; z-index: 10;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsTableBody">
+                                    <tr><td colspan="7" style="padding: 20px; text-align: center; color: #888;">No logs available.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 5px;">
+                            <span id="ticketLogsPageInfo" style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Page 1 of 1</span>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="btnPrevTicketLogs" style="background: #134299; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
+                                    <i class="fas fa-chevron-left" style="margin-right: 5px;"></i> Previous
+                                </button>
+                                <button id="btnNextTicketLogs" style="background: #134299; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
+                                    Next <i class="fas fa-chevron-right" style="margin-left: 5px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
+                        <h2 style="color: #20201f;">Reset Zone:</h2>
+                        <button id="btnResetQueues" class="btn-action btn-sys" style="max-width: 300px; background: #0154f0;">Reset All Queues to 0</button>
+                        <button id="btnDailyResetQueues" class="btn-action btn-sys" style="max-width: 300px; background: #0692f6;">Reset Today Queues to 0</button>
+                        <h2 style="color: #ff3700;">Danger Zone: This deletes logs in Master History</h2>
+                        <button id="btnDeleteRange" class="btn-action" style="max-width: 220px; margin-left: 12px; background: #dc3545;">Delete Logs by Range</button>
+                    </div>
+                </div>
+            </section>
+
+            <div id="deleteRangeModal" class="modal-overlay" aria-hidden="true">
+                <div class="modal-box">
+                    <button class="modal-close-btn" id="deleteRangeClose">✕</button>
+                    <div class="modal-icon"><i class="fas fa-trash-alt"></i></div>
+                    <h2 class="modal-title">Delete Ticket Logs by Time Range</h2>
+                    <p class="modal-text">Specify the start and end date/time for log deletion. This action will permanently remove matching records from both live ticket logs and archived history.</p>
+                    <div class="input-group">
+                        <label for="deleteRangeStart">Start (inclusive)</label>
+                        <input id="deleteRangeStart" type="datetime-local" style="padding:8px; border-radius:6px; border:1px solid #ccc; width:100%;" />
+                    </div>
+                    <div class="input-group">
+                        <label for="deleteRangeEnd">End (exclusive)</label>
+                        <input id="deleteRangeEnd" type="datetime-local" style="padding:8px; border-radius:6px; border:1px solid #ccc; width:100%;" />
+                    </div>
+                    <div class="modal-actions">
+                        <button id="cancelDeleteRange" class="modal-btn btn-cancel">Cancel</button>
+                        <button id="confirmDeleteRange" class="modal-btn btn-confirm">Delete Range</button>
+                    </div>
+                </div>
+            </div>
+            
+            <section id="analyticsSection" class="section">
+                <div class="container" style="max-width: 1100px;">
+                    <div class="card" style="grid-column: 1 / -1;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2>System User Accounts Logs</h2>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="date" id="userLogDateFilter" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: 'Inter', sans-serif;">
+                                <button id="btnDownloadUserLogs" class="btn-action" style="max-width: 200px; margin-bottom: 0; background: #27ae60;">
+                                    <i class="fas fa-file-download" style="margin-right: 8px;"></i>Download CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="logs-table-scroll logs-table-scroll--user" style="overflow-x: auto; overflow-y: auto; max-height: 400px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #e2e8f0;">
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #00e439; z-index: 10;">Timestamp</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #00e439; z-index: 10;">User ID</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #00e439; z-index: 10;">Role</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #00e439; z-index: 10;">Windows</th>
+                                        <th style="padding: 12px 15px; position: sticky; top: 0; background: #00e439; z-index: 10;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userLogsTableBody">
+                                    <tr><td colspan="6" style="padding: 20px; text-align: center; color: #888;">No user account logs available.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 5px;">
+                            <span id="userLogsPageInfo" style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Page 1 of 1</span>
+                            <div style="display: flex; gap: 10px;">
+                                <button id="btnPrevUserLogs" style="background: #134299; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
+                                    <i class="fas fa-chevron-left" style="margin-right: 5px;"></i> Previous
+                                </button>
+                                <button id="btnNextUserLogs" style="background: #134299; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s;">
+                                    Next <i class="fas fa-chevron-right" style="margin-left: 5px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
+                        <h2 style="color: #e74c3c;">Danger Zone</h2>
+                        <button id="btnClearUserLogs" class="btn-action btn-sys" style="max-width: 300px; background: #e74c3c;">Clear All User Logs</button>
+                    </div>
+                </div>
+            </section>
+
+            
+            <section id="settingsSection" class="section">
+                <div class="container">
+                    <div class="card info-card">
+                        <h2>Settings</h2>
+                        <p style="color: #64748b; margin-bottom: 20px;">Manage your system preferences and account configurations.</p>
+                        
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-icon"><i class="bx bx-user"></i></div>
+                                <div class="setting-details">
+                                    <h4 style="color: #000;">Account Controls</h4>
+                                    <p>Update your profile, password, and security settings</p>
+                                </div>
+                                <div class="setting-action">
+                                    <button id="btnManageAccount" class="btn-action btn-role" style="padding: 8px 16px; margin: 0; width: auto;">Manage</button>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-icon"><i class="bx bx-slider-alt"></i></div>
+                                <div class="setting-details">
+                                    <h4>Controller Mode</h4>
+                                    <p>Switch to the queue control interface</p>
+                                </div>
+                                <div class="setting-action">
+                                    <button id="btnSwitchController" class="btn-action btn-role" style="padding: 8px 16px; margin: 0; width: auto;">Switch</button>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-icon"><i class="bx bx-moon"></i></div>
+                                <div class="setting-details">
+                                    <h4>Dark Mode</h4>
+                                    <p>Toggle between light and dark visual themes</p>
+                                </div>
+                                <div class="setting-action">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="darkModeToggle">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-icon"><i class="bx bx-bell"></i></div>
+                                <div class="setting-details">
+                                    <h4>System Notifications</h4>
+                                    <p>Enable or disable browser alert sounds and popups</p>
+                                </div>
+                                <div class="setting-action">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="notificationsToggle" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <div class="setting-icon"><i class="bx bx-shield-alt-2"></i></div>
+                                <div class="setting-details">
+                                    <h4 style="color: #000;">Privacy & Security</h4>
+                                    <p>View all connected devices, manage active sessions, and sign out devices remotely</p>
+                                </div>
+                                <div class="setting-action">
+                                    <button id="btnReviewPrivacy" class="btn-action btn-sys" style="padding: 8px 16px; margin: 0; width: auto;">Manage</button>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-icon"><i class="bx bx-log-out"></i></div>
+                                <div class="setting-details">
+                                    <h4>Sign Out</h4>
+                                    <p>End your current session and log out of the system</p>
+                                </div>
+                                <div class="setting-action">
+                                    <button id="btnSignOut" class="btn-action btn-sys" style="padding: 8px 16px; margin: 0; width: auto;">Sign Out</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="aboutSection" class="section">
+
+            <div class="about-section-container">
+                
+                <div class="left-column">
+                    <div class="main-title-wrapper">
+                        <h1>About Us</h1>
+                        <div class="title-bar"></div>
+                    </div>
+
+                    <div class="premium-glass-card about-intro-card">
+                        <p>The Philippine Statistics Authority (PSA) is the primary statistical arm of the Philippine Government. We are committed to deliver relevant, reliable, and timely statistics and civil registration services for informed decision-making, sustainable development, and improved quality of life for all Filipinos.</p>
+                    </div>
+
+                    <div class="premium-glass-card personality-card">
+                        <h2>Corporate Personality</h2>
+                        <div class="prism-stack">
+                            <div class="prism-row"><span class="prism-letter">P</span><span class="prism-text">rofessional</span></div>
+                            <div class="prism-row"><span class="prism-letter">R</span><span class="prism-text">esponsive</span></div>
+                            <div class="prism-row"><span class="prism-letter">I</span><span class="prism-text">nnovative</span></div>
+                            <div class="prism-row"><span class="prism-letter">S</span><span class="prism-text">trategic Thinker</span></div>
+                            <div class="prism-row"><span class="prism-letter">M</span><span class="prism-text">otivated</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-workspace">
+                    
+                    <div class="center-showcase-layout">
+                        <div class="premium-glass-card clickable-action-card" data-modal-type="mission">
+                            <div class="card-header-node">
+                                <div class="icon-circle-badge"><i class="fas fa-bullseye"></i></div>
+                                <h3>Mission</h3>
+                            </div>
+                            <p>We provide statistics, civil registration, and identification services for sustainable, innovative, and inclusive development.</p>
+                        </div>
+
+                        <div class="premium-glass-card clickable-action-card quality-policy-card" data-modal-type="qualityPolicy">
+                            <div class="card-header-node">
+                                <div class="icon-circle-badge"><i class="fas fa-certificate"></i></div>
+                                <h3>Quality Policy</h3>
+                            </div>
+                            <p>Click to read PSA's full quality policy commitment for statistics, civil registration, and identification services.</p>
+                        </div>
+
+                        <div class="premium-glass-card clickable-action-card" data-modal-type="vision">
+                            <div class="card-header-node">
+                                <div class="icon-circle-badge"><i class="fas fa-eye"></i></div>
+                                <h3>Vision</h3>
+                            </div>
+                            <p>Global leader of dynamic and transformative statistics, civil registration, and identification services.</p>
+                        </div>
+
+                        <div class="premium-glass-card clickable-action-card PSAlogo-card" data-modal-type="PSAlogo">
+                            <div class="card-header-node">
+                                <div class="icon-circle-badge"><img src="/res/PSA.png" alt="PSA logo"></div>
+                                <h3>The PSA Logo and Its Meaning</h3>
+                            </div>
+                            <p>Click to view the official logo of PSA and discover the meaning behind its design, symbols, and elements.</p>
+                        </div>
+
+                    </div>
+
+                    <div class="core-values-section">
+                        <div class="section-label">Core Values</div>
+                        <div class="values-grid-layout">
+                            
+                            <div class="premium-glass-card value-accent-card clickable-action-card" data-modal-type="integrity" style="--accent-glow: #00cbc6; --accent-rgb: 0, 203, 198;">
+                                <div class="card-header-node">
+                                    <div class="icon-circle-badge"><i class="fas fa-shield-alt"></i></div>
+                                    <h3>Integrity</h3>
+                                </div>
+                                <p>We observe at all times the highest standards of ethics, conduct, and professionalism.</p>
+                            </div>
+
+                            <div class="premium-glass-card value-accent-card clickable-action-card" data-modal-type="service" style="--accent-glow: #ffc107; --accent-rgb: 255, 193, 7;">
+                                <div class="card-header-node">
+                                    <div class="icon-circle-badge"><i class="fas fa-award"></i></div>
+                                    <h3>Service Excellence</h3>
+                                </div>
+                                <p>We commit to deliver high-quality, accurate, and timely statistics and civil registration services.</p>
+                            </div>
+
+                            <div class="premium-glass-card value-accent-card clickable-action-card" data-modal-type="adaptability" style="--accent-glow: #2ecc71; --accent-rgb: 46, 204, 113;">
+                                <div class="card-header-node">
+                                    <div class="icon-circle-badge"><i class="fas fa-sync-alt"></i></div>
+                                    <h3>Adaptability</h3>
+                                </div>
+                                <p>We continuously innovate and adapt to the changing needs of our stakeholders and technology.</p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            </section> 
+
+            <div class="modal-blur-overlay" id="globalModalOverlay">
+                <div class="modal-glass-container">
+                    <button class="modal-close-btn" id="closeModalBtn" aria-label="Close">&times;</button>
+                    <div id="modal-payload-space">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-overlay" id="accountModal">
+                <div class="modal-box">
+                    <button class="modal-close-btn" id="btnCancelAccountTop" aria-label="Close">&times;</button>
+                    <div class="modal-icon" style="color: #0d6efd; background: rgba(13, 110, 253, 0.1);"><i class="bx bx-user"></i></div>
+                    <h2 class="modal-title" style="color: #000;">Account Controls</h2>
+                    <p class="modal-text">Update your email or change your password.</p>
+                    
+                    <div style="margin-top: 20px; text-align: left;">
+                        <div class="input-group">
+                            <label>Email Address</label>
+                            <input type="email" id="accNewEmail" placeholder="your.email@psa.gov.ph">
+                        </div>
+                        <div class="input-group" style="position: relative;">
+                            <label>Current Password <span style="color:#e74c3c">*</span></label>
+                            <input type="password" id="accCurrentPassword" placeholder="Required to save changes">
+                            <i class="fas fa-eye toggle-password" data-target="accCurrentPassword" style="position: absolute; right: 15px; top: 38px; cursor: pointer; color: #64748b;"></i>
+                        </div>
+                        <div class="input-group" style="position: relative;">
+                            <label>New Password</label>
+                            <input type="password" id="accNewPassword" placeholder="Leave blank to keep current password">
+                            <i class="fas fa-eye toggle-password" data-target="accNewPassword" style="position: absolute; right: 15px; top: 38px; cursor: pointer; color: #64748b;"></i>
+                        </div>
+                        <div class="input-group" style="position: relative;">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="accConfirmNewPassword" placeholder="Confirm new password">
+                            <i class="fas fa-eye toggle-password" data-target="accConfirmNewPassword" style="position: absolute; right: 15px; top: 38px; cursor: pointer; color: #64748b;"></i>
+                        </div>
+                        <div id="accountUpdateStatus" class="status-msg" style="min-height: 20px; text-align: center;"></div>
+                    </div>
+
+                    <div class="modal-actions" style="margin-top: 15px;">
+                        <button class="modal-btn btn-cancel" id="btnCancelAccount">Cancel</button>
+                        <button class="modal-btn btn-confirm" id="btnSaveAccount">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-overlay" id="privacyModal">
+                <div class="modal-box">
+                    <button class="modal-close-btn" id="btnCancelPrivacyTop" aria-label="Close">&times;</button>
+                    <div class="modal-icon" style="color: #27ae60; background: rgba(39, 174, 96, 0.1);"><i class="bx bx-shield-alt-2"></i></div>
+                    <h2 class="modal-title" style="color: #000;">Privacy & Security</h2>
+                    <p class="modal-text">Manage your connected devices and active login sessions. Review all locations where you're logged in and sign out any unfamiliar devices.</p>
+                    
+                    <div style="margin-top: 20px; text-align: left;">
+                        <div class="input-group">
+                            <label>Current IP Address</label>
+                            <input type="text" id="privIpAddress" readonly style="background: rgba(0,0,0,0.05); cursor: not-allowed; color: #64748b;">
+                        </div>
+                        <label style="display: block; margin-bottom: 12px; font-weight: 600; font-size: 0.9rem; color: #1e293b;">
+                            <i class="fas fa-devices" style="margin-right: 6px;"></i>Your Active Sessions
+                        </label>
+                        <div id="privDeviceList" style="border: 1px solid #e2e8f0; border-radius: 8px; max-height: 400px; overflow-y: auto; margin-bottom: 15px; background: rgba(255,255,255,0.3); padding: 8px;">
+                            </div>
+                        <div id="privacyStatus" class="status-msg" style="min-height: 20px; text-align: center; font-size: 0.9rem;"></div>
+                    </div>
+
+                    <div class="modal-actions" style="margin-top: 20px;">
+                        <button class="modal-btn btn-cancel" id="btnCancelPrivacy">Close</button>
+                        <button class="modal-btn btn-confirm" id="btnSignOutOtherDevices" style="background: #e74c3c; min-width: auto;">Sign Out All Other Devices</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+
+                
+                const contentDatabase = {
+                    mission: {
+                        icon: "fa-bullseye",
+                        title: "Our Mission",
+                        text: "We provide statistics, civil registration, and identification services for sustainable, innovative, and inclusive development."
+                    },
+                    vision: {
+                        icon: "fa-eye",
+                        title: "Our Vision",
+                        text: "Global leader of dynamic and transformative statistics, civil registration, and identification services."
+                    },
+                    integrity: {
+                        icon: "fa-shield-alt",
+                        title: "Integrity",
+                        text: "We observe at all times the highest standards of ethics, conduct, and professionalism. We treat our data stacks with total confidentiality and ensure public records stay shielded from external compromises."
+                    },
+                    service: {
+                        icon: "fa-award",
+                        title: "Service Excellence",
+                        text: "We commit to deliver high-quality, accurate, and timely statistics and civil registration services. Every interaction is designed to optimize consumer wait times and generate accessible user structures."
+                    },
+                    adaptability: {
+                        icon: "fa-sync-alt",
+                        title: "Adaptability",
+                        text: "We continuously innovate and adapt to the changing needs of our stakeholders and technology. Embracing modern web interfaces allows our platform infrastructure to fluidly transition across dynamic systemic requirements."
+                    },
+                    qualityPolicy: {
+                        icon: "fa-certificate",
+                        title: "Quality Policy",
+                        text: `<p>We, the Philippine Statistics Authority, commit to deliver relevant and reliable statistics, efficient civil registration services and inclusive identification system to our clients and stakeholders.</p><br>
+                               <p>We adhere to the United Nations Fundamental Principles of Official Statistics in the production of quality general-purpose statistics.</p><br>
+                               <p>We commit to deliver efficient civil registration services and inclusive identification system in accordance with the laws, rules and regulations, and other statutory requirements.</p><br>
+                               <p>We endeavor to live by the established core values and corporate personality of PSA and adopt the appropriate technology in the development of our products and delivery of services to ensure customer satisfaction.</p><br>
+                               <p>We commit to continually improve the effectiveness of our Quality Management System towards equitable development for improved quality of life for all.</p>`
+                    },
+                    PSAlogo: {
+                        iconHtml: '<img src="/res/PSA.png" alt="PSA logo" class="modal-logo-icon">',
+                        title: "The PSA Logo and Its Meaning",
+                        text: `<p>Two main elements in the logo.</p><br>
+                               <h3>1. Three Curved Arrows</h3>
+                               <p>The three arrows symbolize the PSA’s three main pillars: being solid, responsive, and world-class. Colored red, yellow, and blue, they represent the Philippine flag and PSA’s role as the national statistical agency. Their connected structure signifies unity and strength, while their upward direction reflects progress, dynamism, and responsiveness in achieving economic and social development.</p><br>
+                               <h3>2. Sphere and Grid (Globe)</h3>
+                               <p>Represent the PSA’s adherence to the United Nations Fundamental Principles of Official Statistics and commitment to international conventions and standards. It also represents the PSA’s participation in the global statistical community, mirroring its vision of being world-class.</p>`
+                    }
+                };
+
+                const modalOverlay = document.getElementById('globalModalOverlay');
+                const modalPayload = document.getElementById('modal-payload-space');
+                const closeModalBtn = document.getElementById('closeModalBtn');
+
+                document.querySelectorAll('.clickable-action-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const type = card.getAttribute('data-modal-type');
+                        const data = contentDatabase[type];
+
+                        if (data) {
+                            const iconMarkup = data.iconHtml || `<i class="fas ${data.icon}"></i>`;
+                            const iconColor = type === 'mission' ? '#ef4444' : 
+                                            type === 'vision' ? '#3b82f6' : 
+                                            type === 'qualityPolicy' ? '#f59e0b' : 
+                                            type === 'integrity' ? '#06b6d4' : 
+                                            type === 'service' ? '#8b5cf6' : 
+                                            type === 'adaptability' ? '#10b981' : 
+                                            type === 'PSAlogo' ? '#f97316' : '#ef4444';
+                            
+                            modalPayload.innerHTML = `
+                                <div style="margin-bottom: 8px;">
+                                    ${iconMarkup}
+                                </div>
+                                <h3 style="color: #ffffff; font-weight: 700; font-size: 1.5rem; margin-bottom: 12px;">${data.title}</h3>
+                                <p style="color: #cbd5e1; margin: 0; font-size: 0.95rem; line-height: 1.85;">${data.text}</p>
+                            `;
+                            
+                            const iconEl = modalPayload.querySelector('i');
+                            if (iconEl) {
+                                iconEl.style.width = '66px';
+                                iconEl.style.height = '66px';
+                                iconEl.style.borderRadius = '50%';
+                                iconEl.style.background = type === 'mission' ? 'rgba(239, 68, 68, 0.15)' : 
+                                                        type === 'vision' ? 'rgba(59, 130, 246, 0.15)' :
+                                                        type === 'qualityPolicy' ? 'rgba(245, 158, 11, 0.15)' :
+                                                        type === 'integrity' ? 'rgba(6, 182, 212, 0.15)' :
+                                                        type === 'service' ? 'rgba(139, 92, 246, 0.15)' :
+                                                        type === 'adaptability' ? 'rgba(16, 185, 129, 0.15)' :
+                                                        type === 'PSAlogo' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+                                iconEl.style.color = iconColor;
+                                iconEl.style.display = 'inline-flex';
+                                iconEl.style.alignItems = 'center';
+                                iconEl.style.justifyContent = 'center';
+                                iconEl.style.fontSize = '2rem';
+                                iconEl.style.margin = '0 auto';
+                            }
+                            
+                            modalOverlay.classList.add('active');
+                        }
+                    });
+                });
+
+                closeModalBtn.addEventListener('click', () => modalOverlay.classList.remove('active'));
+                
+                modalOverlay.addEventListener('click', (e) => {
+                    if (e.target === modalOverlay) modalOverlay.classList.remove('active');
+                });
+
+            </script>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged, updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+        import { getDatabase, ref, set, get, remove, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
+            authDomain: "queue-project-login.firebaseapp.com",
+            projectId: "queue-project-login",
+            storageBucket: "queue-project-login.firebasestorage.app",
+            messagingSenderId: "869956656004",
+            appId: "1:869956656004:web:3d2a98bea880c701605bd1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const socket = io();
+        
+        // --- DEVICE DETECTION & SESSION MANAGEMENT ---
+        const getDeviceInfo = () => {
+            const ua = navigator.userAgent;
+            let browser = "Unknown Browser";
+            let os = "Unknown OS";
+            let deviceIcon = "fa-desktop";
+            
+            if (ua.includes("Firefox")) browser = "Firefox";
+            else if (ua.includes("Chrome") && !ua.includes("Edge")) browser = "Chrome";
+            else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+            else if (ua.includes("Edge") || ua.includes("Edg")) browser = "Edge";
+            
+            if (ua.includes("Win")) { os = "Windows PC"; deviceIcon = "fa-desktop"; }
+            else if (ua.includes("Mac")) { os = "MacBook"; deviceIcon = "fa-laptop"; }
+            else if (ua.includes("Linux")) { os = "Linux"; deviceIcon = "fa-desktop"; }
+            else if (ua.includes("Android")) { os = "Android Phone"; deviceIcon = "fa-mobile-alt"; }
+            else if (ua.includes("like Mac")) { os = "iPhone"; deviceIcon = "fa-mobile-alt"; }
+            
+            return { deviceName: `${os} (${browser})`, os, browser, icon: deviceIcon, ua };
+        };
+
+        const generateDeviceId = () => {
+            let deviceId = localStorage.getItem('psa_device_id');
+            if (!deviceId) {
+                const deviceInfo = getDeviceInfo();
+                const uniqueStr = Math.random().toString(36).substring(2, 10);
+                deviceId = btoa(deviceInfo.os + deviceInfo.browser).substring(0, 8) + '_' + uniqueStr;
+                localStorage.setItem('psa_device_id', deviceId);
+            }
+            return deviceId;
+        };
+        
+        const fetchIpAddress = async () => {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
+                const data = await res.json();
+                if (data.ip) return data.ip;
+            } catch(e) {}
+
+            try {
+                const res = await fetch('https://api.seeip.org/jsonip', { cache: 'no-store' });
+                const data = await res.json();
+                if (data.ip) return data.ip;
+            } catch(e) {}
+
+            try {
+                const res = await fetch('https://freeipapi.com/api/json', { cache: 'no-store' });
+                const data = await res.json();
+                if (data.ipAddress) return data.ipAddress;
+            } catch(e) {}
+
+            return 'Unknown';
+        };
+
+        // Save session to Firebase
+        const saveDeviceSession = async (user, ipAddress = 'Unknown') => {
+            if (!user) return null;
+            const deviceInfo = getDeviceInfo();
+            const deviceId = generateDeviceId();
+            const session = {
+                id: deviceId,
+                deviceName: deviceInfo.deviceName,
+                os: deviceInfo.os,
+                browser: deviceInfo.browser,
+                icon: deviceInfo.icon,
+                ip: ipAddress,
+                loginTime: new Date().toISOString(),
+                lastActive: new Date().toLocaleString()
+            };
+            
+            try {
+                const devicesRef = ref(db, `user_devices/${user.uid}/${deviceId}`);
+                await set(devicesRef, session);
+            } catch (err) {
+                console.error('Error saving device session:', err);
+            }
+            return session;
+        };
+
+        let deviceListenerUnsubscribe = null;
+
+        const cleanupDeviceListener = () => {
+            if (deviceListenerUnsubscribe) {
+                deviceListenerUnsubscribe();
+                deviceListenerUnsubscribe = null;
+            }
+        };
+
+        const setupDeviceKickoutListener = (user) => {
+            cleanupDeviceListener();
+            const deviceId = generateDeviceId();
+            const deviceRef = ref(db, `user_devices/${user.uid}/${deviceId}`);
+            
+            deviceListenerUnsubscribe = onValue(deviceRef, (snapshot) => {
+                if (!snapshot.exists()) {
+                    console.log('Current device was signed out remotely');
+                    cleanupDeviceListener();
+                    alert("Your session on this device has been ended by signing out from another device.");
+                    signOut(auth).then(() => {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        window.location.href = "login.html";
+                    });
+                }
+            });
+        };
+        
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                document.getElementById('adminEmailDisplay').innerText = `Admin: ${user.email}`;
+                socket.emit('register_active_user', { email: user.email, location: 'Admin Dashboard - Home' });
+                
+                const response = await fetch('/api/get-role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: user.email }) });
+                const data = await response.json();
+                if (data.role !== 'admin') { alert("Unauthorized."); signOut(auth); window.location.href = "login.html"; }
+                
+                try {
+                    const currentIp = await fetchIpAddress();
+                    await saveDeviceSession(user, currentIp);
+                } catch (e) {
+                    await saveDeviceSession(user, 'Unknown');
+                }
+
+                setupDeviceKickoutListener(user);
+            } else {
+                window.location.href = "login.html";
+            }
+        });
+
+        socket.on('force_logout_signal', (kickedEmail) => {
+            const currentUser = auth.currentUser;
+            if (currentUser && currentUser.email === kickedEmail) {
+                alert("Session Terminated: You logged in from another device.");
+                cleanupDeviceListener();
+                signOut(auth).then(() => { 
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.href = "login.html"; 
+                }).catch(err => {
+                    console.error('Error during forced logout:', err);
+                    window.location.href = "login.html";
+                });
+            }
+        });
+
+        socket.on('active_users_list', (users) => {
+            const container = document.getElementById('activeUsersContainer');
+            if (users.length === 0) return container.innerHTML = '<li style="color: #888; font-weight: normal;">No users online.</li>';
+            
+            container.innerHTML = users.map(user => `
+                <li>
+                    <div class="user-header">
+                        <div class="online-dot"></div>
+                        <span>${user.email}</span>
+                    </div>
+                    <div class="user-location">
+                        <i class="fas fa-desktop" style="margin-right: 5px; opacity: 0.7;"></i> 
+                        ${user.location}
+                    </div>
+                </li>
+            `).join('');
+        });
+
+        document.getElementById('btnKick').addEventListener('click', () => {
+            const email = document.getElementById('kickEmail').value;
+            if (!email) return;
+            socket.emit('kick_user', email);
+            document.getElementById('kickStatus').innerText = `Sign-out signal broadcasted.`;
+            document.getElementById('kickEmail').value = ''; 
+            setTimeout(() => document.getElementById('kickStatus').innerText = '', 4000);
+        });
+
+        const handleAccessChange = async (endpoint, successMsg) => {
+            const email = document.getElementById('accessEmail').value;
+            const status = document.getElementById('accessStatus');
+            if (!email) return status.innerText = "Please enter an email.";
+
+            try {
+                const bodyData = endpoint === '/api/set-role' ? { email, role: 'admin' } : { email };
+                const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyData) });
+                const data = await response.json();
+                
+                if (data.success) {
+                    status.className = "status-msg text-success";
+                    status.innerText = successMsg;
+                    document.getElementById('accessEmail').value = '';
+                    if (endpoint === '/api/ban-user') socket.emit('kick_user', email);
+                    loadCreatedAccounts(); 
+                }
+            } catch (err) { status.innerText = "Error updating database."; }
+            setTimeout(() => status.innerText = '', 4000);
+        };
+
+        document.getElementById('btnBan').addEventListener('click', () => {
+            showConfirmModal('banUser', () => {
+                handleAccessChange('/api/ban-user', "User banned and kicked.");
+            });
+        });
+        document.getElementById('btnMakeAdmin').addEventListener('click', () => {
+            showConfirmModal('makeAdmin', () => {
+                handleAccessChange('/api/set-role', "User promoted to Admin.");
+            });
+        });
+        document.getElementById('btnResetQueues').addEventListener('click', () => {
+            showConfirmModal('resetQueues', () => {
+                const btn = document.getElementById('btnResetQueues');
+                if (btn) { btn.disabled = true; btn.textContent = 'Resetting...'; }
+                socket.emit('reset_queues');
+            });
+        });
+        document.getElementById('btnDailyResetQueues').addEventListener('click', () => {
+            showConfirmModal('resetDailyQueues', () => {
+                const btn = document.getElementById('btnDailyResetQueues');
+                if (btn) { btn.disabled = true; btn.textContent = 'Resetting...'; }
+                socket.emit('reset_Dailyqueues');
+            });
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', (e) => {
+            e.preventDefault();
+            showConfirmModal('exit', async () => {
+                const user = auth.currentUser;
+                try {
+                    if (user) {
+                        await fetch('/api/log-user-logout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                email: user.email,
+                                userId: user.email,
+                                action: 'LOGOUT'
+                            })
+                        });
+                    }
+                } catch (logErr) {
+                    console.error('Error logging logout:', logErr);
+                }
+                cleanupDeviceListener();
+                signOut(auth).then(() => {
+                    localStorage.removeItem('psa_admin_token');
+                    localStorage.removeItem('psa_role');
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.href = "/login.html";
+                }).catch(err => {
+                    console.error('Error during logout:', err);
+                    window.location.href = "/login.html";
+                });
+            });
+        });
+
+        function showConfirmModal(type, onConfirm) {
+            let overlay = document.getElementById('custom-modal');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'custom-modal';
+                overlay.className = 'modal-overlay active';
+                overlay.innerHTML = `
+                    <div class="modal-box">
+                        <button class="modal-close-btn" id="btn-modal-close" aria-label="Close">&times;</button>
+                        <div id="modal-icon" class="modal-icon"></div>
+                        <h2 id="modal-title" class="modal-title">Confirm</h2>
+                        <p id="modal-text" class="modal-text">Are you sure?</p>
+                        <div class="modal-actions">
+                            <button class="modal-btn btn-cancel" id="btn-modal-cancel">Cancel</button>
+                            <button id="modal-confirm-btn" class="modal-btn btn-confirm">Confirm</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+                document.getElementById('btn-modal-cancel').addEventListener('click', closeConfirmModal);
+                document.getElementById('btn-modal-close').addEventListener('click', closeConfirmModal);
+            }
+
+            const titleObj = document.getElementById('modal-title');
+            const textObj = document.getElementById('modal-text');
+            const iconObj = document.getElementById('modal-icon');
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+
+            const configs = {
+                exit: { title: 'Sign Out', text: 'Are you sure you want to sign out?', icon: 'fas fa-sign-out-alt', color: '#ef4444' },
+                clearLogs: { title: 'Deleting All User Logs', text: 'Are you sure you want to permanently delete all user logs? This cannot be undone.', icon: 'fas fa-trash-alt', color: '#ef4444' },
+                resetQueues: { title: 'Resetting All Queues to 0', text: 'Are you sure you want to reset all queues to 0?', icon: 'fas fa-sync-alt', color: '#ef4444' },
+                resetDailyQueues: { title: 'Resetting Today\'s Queues to 0', text: 'Are you sure you want to reset today\'s queues to 0?', icon: 'fas fa-calendar-day', color: '#ef4444' },
+                banUser: { title: 'Banning a User', text: 'Are you sure you want to ban this user?', icon: 'fas fa-user-slash', color: '#ef4444' },
+                makeAdmin: { title: 'Changing User Role to Admin', text: 'Are you sure you want to change this user role to admin?', icon: 'fas fa-user-shield', color: '#3b82f6' },
+                deleteUser: { title: 'Delete User', text: 'Are you sure you want to delete this user?', icon: 'fas fa-user-times', color: '#ef4444' }
+            };
+
+            const cfg = configs[type] || configs.exit;
+            titleObj.innerText = cfg.title;
+            textObj.innerText = cfg.text;
+            iconObj.innerHTML = `<i class="${cfg.icon}"></i>`;
+            iconObj.style.color = cfg.color;
+            iconObj.style.background = cfg.color === '#ef4444' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)';
+            confirmBtn.style.background = cfg.color;
+
+            confirmBtn.onclick = () => {
+                closeConfirmModal();
+                onConfirm();
+            };
+            overlay.classList.add('active');
+        }
+
+        function closeConfirmModal() {
+            const overlay = document.getElementById('custom-modal');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        const sidebarIcons = document.querySelectorAll('.sidebar-icon');
+        const sections = document.querySelectorAll('.section');
+
+        const sectionLocations = {
+            home: 'Admin Dashboard - Home',
+            controls: 'Admin Dashboard - Session Control',
+            logs: 'Admin Dashboard - Queue Logs',
+            analytics: 'Admin Dashboard - User Logs',
+            settings: 'Admin Dashboard - Settings',
+            about: 'Admin Dashboard - About'
+        };
+
+        const updateAdminLocation = (sectionName) => {
+            const location = sectionLocations[sectionName];
+            if (location) socket.emit('update_user_location', location);
+        };
+
+        const switchSection = (sectionName) => {
+            sidebarIcons.forEach(i => {
+                i.classList.remove('active');
+                if (i.dataset.section === sectionName) i.classList.add('active');
+            });
+            sections.forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(`${sectionName}Section`);
+            if (target) target.classList.add('active');
+            updateAdminLocation(sectionName);
+        };
+
+        sidebarIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                const section = icon.dataset.section;
+                if (section === 'dashboard' || section === 'createusers') return;
+                switchSection(section);
+            });
+        });
+
+        const psaLogo = document.getElementById('psaLogo');
+        if (psaLogo) {
+            psaLogo.addEventListener('click', () => {
+                switchSection('home');
+                window.location.reload();
+            });
+        }
+
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('toggleBtn');
+        toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('expanded'); });
+
+        // ─── UTILITY FUNCTIONS (Defined Before Usage) ───
+        const getRoleBadge = (role) => {
+            const roleMap = {
+                admin:      { bg: '#dbeafe', color: '#1e40af', label: 'Admin' },
+                staff:      { bg: '#dcfce7', color: '#166534', label: 'Staff' },
+                controller: { bg: '#e0f2fe', color: '#0369a1', label: 'Controller' },
+                superadmin: { bg: '#fce7f3', color: '#9d174d', label: 'Super Admin' },
+                viewer:     { bg: '#fef9c3', color: '#854d0e', label: 'Viewer' },
+            };
+            const r = roleMap[(role || '').toLowerCase()] || { bg: '#f1f5f9', color: '#475569', label: role || 'Unknown' };
+            return `<span class="role-badge" style="padding: 4px 10px; border-radius: 4px; background: ${r.bg}; color: ${r.color}; font-size: 0.75rem; font-weight: 600;">${r.label}</span>`;
+        };
+
+        const getStatusBadge = (status) => {
+            const s = (status || '').toLowerCase();
+            const colors = {
+                active:   { bg: '#dcfce7', color: '#166534' },
+                inactive: { bg: '#f1f5f9', color: '#475569' },
+                banned:   { bg: '#fee2e2', color: '#991b1b' },
+                pending:  { bg: '#fef9c3', color: '#854d0e' },
+                login:    { bg: '#e0f2fe', color: '#0369a1' },
+            };
+            const c = colors[s] || { bg: '#f1f5f9', color: '#475569' };
+            return `<span class="status-badge" style="padding: 4px 8px; border-radius: 4px; background: ${c.bg}; color: ${c.color}; font-size: 0.75rem;">${status || 'Unknown'}</span>`;
+        };
+
+        // ─── CREATED ACCOUNTS MANAGEMENT ───
+        const loadCreatedAccounts = async () => {
+            const tableBody = document.getElementById('accountsTableBody');
+            if (!tableBody) return;
+            try {
+                const response = await fetch('/api/system-logs/roles');
+                const data = await response.json();
+                
+                if (data.success && data.roles) {
+                    if (data.roles.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #888;">No accounts found.</td></tr>';
+                        return;
+                    }
+                    
+                    tableBody.innerHTML = data.roles.map(acc => `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 12px 15px; font-weight: 600; color: #1e293b;">${acc.email}</td>
+                            <td style="padding: 12px 15px;">${getRoleBadge(acc.role)}</td>
+                            <td style="padding: 12px 15px; text-align: center;">
+                                <button class="btn-delete-account" data-email="${acc.email}" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: 0.2s;">
+                                    <i class="fas fa-trash-alt" style="margin-right: 5px;"></i>Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                    
+                    document.querySelectorAll('.btn-delete-account').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const email = e.currentTarget.getAttribute('data-email');
+                            showConfirmModal('deleteUser', async () => {
+                                try {
+                                    const res = await fetch('/api/delete-user/' + encodeURIComponent(email), { method: 'DELETE' });
+                                    const result = await res.json();
+                                    if (result.success) {
+                                        loadCreatedAccounts(); 
+                                    } else {
+                                        alert('Failed to delete user.');
+                                    }
+                                } catch (err) {
+                                    console.error(err);
+                                    alert('Error deleting user.');
+                                }
+                            });
+                        });
+                    });
+                }
+            } catch (err) {
+                tableBody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: #e74c3c;">Error loading accounts.</td></tr>';
+            }
+        };
+
+        // ─── TICKET LOGS MANAGEMENT (WITH FRONTEND PAGINATION) ───
+        let systemLogs = [];
+        let currentTicketLogPage = 1 ;
+        const rowsPerTicketPage = 10 ; 
+
+        const formatLogLine = (log) => {
+            return {
+                timestamp: log.timestamp_readable || (log.iso_timestamp ? new Date(log.iso_timestamp).toLocaleString() : new Date().toLocaleString()),
+                customerType: log.customerType || log.category || (log.isPriority === true ? 'Priority' : log.isPriority === false ? 'Regular' : 'Priority'),
+                department: log.department || (log.dept ? log.dept.toUpperCase() : 'UNKNOWN'),
+                ticketId: log.ticketId || log.label || log.id || 'un',
+                windows: log.windows || log.window || '',
+                status: log.status || log.action || 'Unknown'
+            };
+        };
+
+        const renderLogs = () => {
+            const tableBody = document.getElementById('logsTableBody');
+            const pageInfo = document.getElementById('ticketLogsPageInfo');
+            const btnPrev = document.getElementById('btnPrevTicketLogs');
+            const btnNext = document.getElementById('btnNextTicketLogs');
+            const filterDate = document.getElementById('ticketLogDateFilter').value;
+            const filterDept = document.getElementById('ticketLogDeptFilter').value;
+
+            if (!tableBody) return;
+
+            let filteredLogs = systemLogs;
+            if (filterDate) {
+                filteredLogs = filteredLogs.filter(log => {
+                    const logDateStr = log.iso_timestamp || log.timestamp;
+                    if (!logDateStr) return false;
+                    const logDate = new Date(logDateStr);
+                    const formattedLogDate = logDate.getFullYear() + "-" + String(logDate.getMonth() + 1).padStart(2, '0') + "-" + String(logDate.getDate()).padStart(2, '0');
+                    return formattedLogDate === filterDate;
+                });
+            }
+            if (filterDept) {
+                filteredLogs = filteredLogs.filter(log => {
+                    const dept = (log.department || log.dept || '').toLowerCase();
+                    return dept === filterDept;
+                });
+            }
+
+            if (!filteredLogs || filteredLogs.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #888;">No logs available.</td></tr>`;
+                if (pageInfo) pageInfo.innerText = "Page 1 of 1";
+                if (btnPrev) btnPrev.style.opacity = "0.4";
+                if (btnNext) btnNext.style.opacity = "0.4";
+                return;
+            }
+
+            const totalPages = Math.ceil(filteredLogs.length / rowsPerTicketPage) || 1;
+            
+            if (currentTicketLogPage > totalPages) currentTicketLogPage = totalPages;
+            if (currentTicketLogPage < 1) currentTicketLogPage = 1;
+
+
+            const startIndex = (currentTicketLogPage - 1) * rowsPerTicketPage;
+            const endIndex = startIndex + rowsPerTicketPage;
+            const paginatedLogs = filteredLogs.slice(startIndex, endIndex);
+
+            tableBody.innerHTML = paginatedLogs.map(log => {
+                const row = formatLogLine(log);
+                return `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 12px 15px; color: #64748b;">${row.timestamp}</td>
+                        <td style="padding: 12px 15px; font-weight: 600; color: #1e293b;">${row.customerType}</td>
+                        <td style="padding: 12px 15px; color: #64748b;">${row.department}</td>
+                        <td style="padding: 12px 15px; color: #1e293b;">${row.ticketId}</td>
+                        <td style="padding: 12px 15px; color: #64748b;">${row.windows || 'Unassigned'}</td>
+                        <td style="padding: 12px 15px;"><span class="status-badge" style="padding: 4px 8px; border-radius: 4px; background: #dcfce7; color: #166534; font-size: 0.75rem;">${row.status}</span></td>
+                        <td style="padding: 12px 15px;"><button class="delete-btn" data-id="${log._id}" data-collection="${log.archivedAt ? 'master_history' : 'ticket_logs'}" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Delete</button></td>
+                    </tr>`;
+            }).join('');
+
+            if (pageInfo) {
+                pageInfo.innerText = `Page ${currentTicketLogPage} of ${totalPages} (${filteredLogs.length} total entries)`;
+            }
+            
+            if (btnPrev) {
+                btnPrev.disabled = currentTicketLogPage === 1;
+                btnPrev.style.opacity = currentTicketLogPage === 1 ? "0.4" : "1";
+                btnPrev.style.cursor = currentTicketLogPage === 1 ? "not-allowed" : "pointer";
+            }
+            if (btnNext) {
+                btnNext.disabled = currentTicketLogPage === totalPages;
+                btnNext.style.opacity = currentTicketLogPage === totalPages ? "0.4" : "1";
+                btnNext.style.cursor = currentTicketLogPage === totalPages ? "not-allowed" : "pointer";
+            }
+        };
+
+        const loadSystemLogs = async () => {
+            try {
+                const filterDate = document.getElementById('ticketLogDateFilter').value;
+                const filterDept = document.getElementById('ticketLogDeptFilter').value;
+                
+                let url = '/api/system-logs/ticket_logs';
+                const params = new URLSearchParams();
+                if (filterDate) params.append('date', filterDate);
+                if (filterDept) params.append('department', filterDept);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.success && Array.isArray(data.logs)) {
+                    // Ensure we display only active ticket_logs entries (exclude archived/master history records)
+                    systemLogs = data.logs.filter(l => !l.archivedAt);
+                } else {
+                    systemLogs = [];
+                }
+            } catch (err) {
+                systemLogs = [];
+            }
+            renderLogs();
+        };
+
+        document.getElementById('ticketLogDateFilter').addEventListener('change', () => {
+            currentTicketLogPage = 1;
+            renderLogs();
+        });
+
+        document.getElementById('ticketLogDeptFilter').addEventListener('change', () => {
+            currentTicketLogPage = 1;
+            renderLogs();
+        });
+
+        document.getElementById('btnPrevTicketLogs').addEventListener('click', () => {
+            if (currentTicketLogPage > 1) { currentTicketLogPage--; renderLogs(); }
+        });
+
+        document.getElementById('btnNextTicketLogs').addEventListener('click', () => {
+            const filterDate = document.getElementById('ticketLogDateFilter').value;
+            const filterDept = document.getElementById('ticketLogDeptFilter').value;
+            let filteredLogs = systemLogs;
+            if (filterDate) {
+                filteredLogs = filteredLogs.filter(log => {
+                    const logDateStr = log.iso_timestamp || log.timestamp;
+                    if (!logDateStr) return false;
+                    const logDate = new Date(logDateStr);
+                    const formattedLogDate = logDate.getFullYear() + "-" + String(logDate.getMonth() + 1).padStart(2, '0') + "-" + String(logDate.getDate()).padStart(2, '0');
+                    return formattedLogDate === filterDate;
+                });
+            }
+            if (filterDept) {
+                filteredLogs = filteredLogs.filter(log => {
+                    const dept = (log.department || log.dept || '').toLowerCase();
+                    return dept === filterDept;
+                });
+            }
+            const totalPages = Math.ceil(filteredLogs.length / rowsPerTicketPage);
+            if (currentTicketLogPage < totalPages) { currentTicketLogPage++; renderLogs(); }
+        });
+
+        const downloadLogsAsCSV = () => {
+            const rowsToExport = Array.isArray(systemLogs) ? systemLogs : [];
+
+            if (rowsToExport.length === 0) {
+                alert("No logs to export.");
+                return;
+            }
+
+            const headers = ["Timestamp", "Customer Type", "Department", "Ticket ID", "Windows", "Status"];
+            const csvLines = [
+                headers.join(","),
+                ...rowsToExport.map(log => {
+                    const row = formatLogLine(log);
+                    return [
+                        row.timestamp,
+                        row.customerType,
+                        row.department,
+                        row.ticketId,
+                        row.windows,
+                        row.status
+                    ].map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",");
+                })
+            ];
+
+            const csvContent = "\uFEFF" + csvLines.join("\n");
+
+            const today = new Date().toISOString().slice(0, 10);
+            const filename = `PSA_System_Logs_${today}_${rowsToExport.length}rows.csv`;
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.style.display = "none";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            alert(`Export complete: ${rowsToExport.length} rows`);
+        };
+
+        document.getElementById('btnDownloadLogs').addEventListener('click', downloadLogsAsCSV);
+        socket.on('ticket_logs_updated', loadSystemLogs);
+
+        async function deleteLog(id, collection) {
+            if (!confirm('Are you sure you want to delete this log entry?')) return;
+            try {
+                const collections = collection === 'master_history'
+                    ? ['master_history', 'ticket_logs']
+                    : ['ticket_logs', 'master_history'];
+                let deleted = false;
+                for (const col of collections) {
+                    const response = await fetch(`/api/system-logs/${col}/${id}`, { method: 'DELETE' });
+                    const data = await response.json();
+                    if (data.success) { deleted = true; break; }
+                }
+                if (deleted) loadSystemLogs();
+                else console.error('Failed to delete log from any collection.');
+            } catch (err) { console.error(err); }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) deleteLog(e.target.dataset.id, e.target.dataset.collection);
+        });
+
+        // Delete range modal handlers
+        const btnDeleteRange = document.getElementById('btnDeleteRange');
+        const deleteRangeModal = document.getElementById('deleteRangeModal');
+        const deleteRangeClose = document.getElementById('deleteRangeClose');
+        const cancelDeleteRange = document.getElementById('cancelDeleteRange');
+        const confirmDeleteRange = document.getElementById('confirmDeleteRange');
+
+        function openDeleteRangeModal() {
+            if (deleteRangeModal) deleteRangeModal.classList.add('active');
+        }
+        function closeDeleteRangeModal() {
+            if (deleteRangeModal) deleteRangeModal.classList.remove('active');
+        }
+
+        if (btnDeleteRange) btnDeleteRange.addEventListener('click', openDeleteRangeModal);
+        if (deleteRangeClose) deleteRangeClose.addEventListener('click', closeDeleteRangeModal);
+        if (cancelDeleteRange) cancelDeleteRange.addEventListener('click', closeDeleteRangeModal);
+
+        if (confirmDeleteRange) {
+            confirmDeleteRange.addEventListener('click', async () => {
+                const startInput = document.getElementById('deleteRangeStart').value;
+                const endInput = document.getElementById('deleteRangeEnd').value;
+                if (!startInput || !endInput) { alert('Please select both start and end date/time.'); return; }
+                const start = new Date(startInput);
+                const end = new Date(endInput);
+                if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) { alert('Invalid date range. Ensure start < end.'); return; }
+
+                if (!confirm(`Permanently delete logs from ${start.toISOString()} to ${end.toISOString()}? This cannot be undone.`)) return;
+
+                try {
+                    const resp = await fetch('/api/system-logs/delete_range', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ start: start.toISOString(), end: end.toISOString(), collections: ['master_history', 'ticket_logs'] })
+                    });
+                    const result = await resp.json();
+                    if (result.success) {
+                        const totalDeleted = Object.values(result.deleted || {}).reduce((a, b) => typeof b === 'number' ? a + b : a, 0);
+                        alert(`Deletion completed. ${totalDeleted} record(s) removed. Refreshing logs.`);
+                        closeDeleteRangeModal();
+                        loadSystemLogs();
+                    } else {
+                        alert('Deletion failed: ' + (result.error || 'unknown'));
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Deletion failed due to network or server error.');
+                }
+            });
+        }
+
+        socket.on('reset_queues_success', () => {
+            const btn = document.getElementById('btnResetQueues');
+            if (btn) { btn.disabled = false; btn.textContent = 'Reset All Queues to 0'; }
+            loadSystemLogs();
+        });
+
+        socket.on('reset_Dailyqueues_success', () => {
+            const btn = document.getElementById('btnDailyResetQueues');
+            if (btn) { btn.disabled = false; btn.textContent = 'Reset Today Queues to 0'; }
+            loadSystemLogs();
+        });
+
+        // ─── USER ACCOUNTS LOG MANAGEMENT (WITH LIVE ROLE MAPPING) ───
+        let userAccountLogs = [];
+        let currentUserLogPage = 1;
+        const rowsPerUserPage = 10;
+
+        const renderUserLogs = () => {
+            const tableBody = document.getElementById('userLogsTableBody');
+            const pageInfo = document.getElementById('userLogsPageInfo');
+            const btnPrev = document.getElementById('btnPrevUserLogs');
+            const btnNext = document.getElementById('btnNextUserLogs');
+            const filterDate = document.getElementById('userLogDateFilter').value;
+
+            if (!tableBody) return;
+            
+            let filteredLogs = userAccountLogs;
+            if (filterDate) {
+                filteredLogs = userAccountLogs.filter(log => {
+                    const logDateStr = log.iso_timestamp || log.timestamp;
+                    if (!logDateStr) return false;
+                    const logDate = new Date(logDateStr);
+                    const formattedLogDate = logDate.getFullYear() + "-" + String(logDate.getMonth() + 1).padStart(2, '0') + "-" + String(logDate.getDate()).padStart(2, '0');
+                    return formattedLogDate === filterDate;
+                });
+            }
+            
+            if (!filteredLogs || filteredLogs.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #888;">No user account logs available.</td></tr>';
+                if (pageInfo) pageInfo.innerText = "Page 1 of 1";
+                if (btnPrev) btnPrev.style.opacity = "0.4";
+                if (btnNext) btnNext.style.opacity = "0.4";
+                return;
+            }
+            
+            const totalPages = Math.ceil(filteredLogs.length / rowsPerUserPage) || 1;
+            
+            if (currentUserLogPage > totalPages) currentUserLogPage = totalPages;
+            if (currentUserLogPage < 1) currentUserLogPage = 1;
+
+            const startIndex = (currentUserLogPage - 1) * rowsPerUserPage;
+            const endIndex = startIndex + rowsPerUserPage;
+            const paginatedLogs = filteredLogs.slice(startIndex, endIndex);
+            
+            tableBody.innerHTML = paginatedLogs.map(log => {
+                const ts = log.timestamp_readable || new Date(log.iso_timestamp || log.timestamp).toLocaleString();
+                const emailKey = log.email || log.user || log.userId || 'Unknown';
+                const win = log.windows || log.window || 'N/A';
+                const stat = log.status || log.action || 'Unknown';
+                
+                return `<tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 12px 15px; color: #64748b;">${ts}</td>
+                    <td style="padding: 12px 15px; font-weight: 600; color: #1e293b;">${emailKey}</td>
+                    <td style="padding: 12px 15px;">${getRoleBadge(log.role)}</td>
+                    <td style="padding: 12px 15px; color: #64748b;">${win}</td>
+                    <td style="padding: 12px 15px;">${getStatusBadge(stat)}</td>
+                </tr>`;
+            }).join('');
+
+            if (pageInfo) {
+                pageInfo.innerText = `Page ${currentUserLogPage} of ${totalPages} (${filteredLogs.length} total entries)`;
+            }
+            
+            if (btnPrev) {
+                btnPrev.disabled = currentUserLogPage === 1;
+                btnPrev.style.opacity = currentUserLogPage === 1 ? "0.4" : "1";
+                btnPrev.style.cursor = currentUserLogPage === 1 ? "not-allowed" : "pointer";
+            }
+            if (btnNext) {
+                btnNext.disabled = currentUserLogPage === totalPages;
+                btnNext.style.opacity = currentUserLogPage === totalPages ? "0.4" : "1";
+                btnNext.style.cursor = currentUserLogPage === totalPages ? "not-allowed" : "pointer";
+            }
+        };
+
+        const loadUserAccountLogs = async () => {
+            try {
+                const getrolesponse = await fetch('/api/system-logs/roles');
+                const rolesdata = await getrolesponse.json();
+                const rolesMap = {};
+                
+                if (rolesdata.success && Array.isArray(rolesdata.roles)) {
+                    rolesdata.roles.forEach(r => { 
+                        const emailField = r.email || r.user || r.userEmail;
+                        if (emailField && r.role) {
+                            rolesMap[String(emailField).toLowerCase().trim()] = r.role; 
+                        }
+                    });
+                }
+                
+                const response = await fetch('/api/system-logs/auth_logs');
+                const data = await response.json();
+                
+                if (data.success && Array.isArray(data.logs)) {
+                    userAccountLogs = data.logs.map(log => {
+                        const actualEmail = log.email || log.user || log.userId || '';
+                        const lookupEmail = String(actualEmail).toLowerCase().trim();
+                        return {
+                            ...log,
+                            role: log.role || rolesMap[lookupEmail] || 'controller' 
+                        };
+                    });
+                } else {
+                    userAccountLogs = [];
+                }
+            } catch (err) {
+                userAccountLogs = [];
+            }
+            renderUserLogs();
+        };
+
+        document.getElementById('userLogDateFilter').addEventListener('change', () => {
+            currentUserLogPage = 1;
+            renderUserLogs();
+        });
+
+        document.getElementById('btnPrevUserLogs').addEventListener('click', () => {
+            if (currentUserLogPage > 1) { currentUserLogPage--; renderUserLogs(); }
+        });
+
+        document.getElementById('btnNextUserLogs').addEventListener('click', () => {
+            const filterDate = document.getElementById('userLogDateFilter').value;
+            let filteredLogs = userAccountLogs;
+            if (filterDate) {
+                filteredLogs = userAccountLogs.filter(log => {
+                    const logDateStr = log.iso_timestamp || log.timestamp;
+                    if (!logDateStr) return false;
+                    const logDate = new Date(logDateStr);
+                    const formattedLogDate = logDate.getFullYear() + "-" + String(logDate.getMonth() + 1).padStart(2, '0') + "-" + String(logDate.getDate()).padStart(2, '0');
+                    return formattedLogDate === filterDate;
+                });
+            }
+            const totalPages = Math.ceil(filteredLogs.length / rowsPerUserPage);
+            if (currentUserLogPage < totalPages) { currentUserLogPage++; renderUserLogs(); }
+        });
+ 
+        const downloadUserLogsAsCSV = () => {
+            if (userAccountLogs.length === 0) return alert("No user logs to download.");
+            const headers = ["Timestamp", "User ID", "Role", "Windows", "Status"];
+            const rows = userAccountLogs.map(log => [
+                log.timestamp_readable || new Date(log.iso_timestamp || log.timestamp).toLocaleString(),
+                log.userId || log.email || log.user || 'Unknown',
+                log.role || 'Unknown',
+                log.windows || log.window || 'Unassigned',
+                log.status || log.action || 'Unknown'
+            ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(","));
+            
+            const csvContent = [headers.join(","), ...rows].join("\n");
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.setAttribute("href", URL.createObjectURL(blob));
+            link.setAttribute("download", "PSA_UserAccount_Logs_" + new Date().toISOString().split('T')[0] + ".csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+ 
+        document.getElementById('btnDownloadUserLogs').addEventListener('click', downloadUserLogsAsCSV);
+        document.getElementById('btnClearUserLogs').addEventListener('click', () => {
+            showConfirmModal('clearLogs', async () => {
+                const response = await fetch('/api/system-logs/auth_logs/clear', { method: 'DELETE' });
+                const data = await response.json();
+                if (data.success) loadUserAccountLogs();
+            });
+        });
+ 
+        socket.on('user_account_logs_updated', loadUserAccountLogs);
+
+        // --- INITIALIZERS ---
+        loadCreatedAccounts();
+        loadSystemLogs();
+        loadUserAccountLogs();
+        
+        setInterval(loadUserAccountLogs, 5000);
+        window.addEventListener('focus', loadUserAccountLogs);
+
+        // --- NAVIGATION ROUTING LOGIC ---
+        let selectedDepartmentId = '';
+        document.getElementById('dashboardLink').addEventListener('click', function() {
+            window.location.href = 'stats_Dashboard.html';
+        });
+        
+        document.getElementById('createUsersLink').addEventListener('click', function() {
+            window.location.href = 'createusers.html';
+        });
+
+        // --- SETTINGS MENU LOGIC ---
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        function setDarkMode(enabled) {
+            document.documentElement.classList.toggle('dark-theme', enabled);
+            document.body.classList.toggle('dark-theme', enabled);
+        }
+        if (localStorage.getItem('psa_dark_mode') === 'enabled') {
+            darkModeToggle.checked = true;
+            setDarkMode(true);
+        }
+        
+        darkModeToggle.addEventListener('change', function(e) {
+            setDarkMode(e.target.checked);
+            localStorage.setItem('psa_dark_mode', e.target.checked ? 'enabled' : 'disabled');
+        });
+
+        const notificationsToggle = document.getElementById('notificationsToggle');
+        if (localStorage.getItem('psa_notifications') === 'disabled') {
+            notificationsToggle.checked = false;
+        } else {
+            notificationsToggle.checked = true;
+        }
+
+        notificationsToggle.addEventListener('change', function(e) {
+            localStorage.setItem('psa_notifications', e.target.checked ? 'enabled' : 'disabled');
+        });
+
+        document.getElementById('btnSwitchController').addEventListener('click', () => {
+            window.location.href = 'queue-control.html';
+        });
+
+        // --- ACCOUNT CONTROLS MODAL LOGIC ---
+        const accountModal = document.getElementById('accountModal');
+
+        function validatePassword(password) {
+            if (password.length < 8) return "Password must be at least 8 characters long.";
+            if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+            if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter.";
+            if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return "Password must contain at least one special character.";
+            return null;
+        }
+
+        document.getElementById('btnManageAccount').addEventListener('click', () => {
+            const user = auth.currentUser;
+            if (user) {
+                document.getElementById('accNewEmail').value = user.email;
+                document.getElementById('accCurrentPassword').value = '';
+                document.getElementById('accNewPassword').value = '';
+                document.getElementById('accConfirmNewPassword').value = '';
+                document.getElementById('accountUpdateStatus').innerText = '';
+                accountModal.classList.add('active');
+            }
+        });
+
+        document.getElementById('btnCancelAccountTop').addEventListener('click', () => {
+            accountModal.classList.remove('active');
+        });
+
+        document.getElementById('btnCancelAccount').addEventListener('click', () => {
+            accountModal.classList.remove('active');
+        });
+
+        document.getElementById('btnSaveAccount').addEventListener('click', async () => {
+            const user = auth.currentUser;
+            const currentPassword = document.getElementById('accCurrentPassword').value;
+            const newEmail = document.getElementById('accNewEmail').value;
+            const newPassword = document.getElementById('accNewPassword').value;
+            const confirmPassword = document.getElementById('accConfirmNewPassword').value;
+            const statusEl = document.getElementById('accountUpdateStatus');
+            
+            if (!currentPassword) {
+                statusEl.style.color = '#e74c3c';
+                statusEl.innerText = 'Current password is required to make changes.';
+                return;
+            }
+            
+            statusEl.style.color = '#1e293b';
+            statusEl.innerText = 'Updating...';
+            
+            if (newPassword) {
+                if (newPassword !== confirmPassword) {
+                    statusEl.style.color = '#e74c3c';
+                    statusEl.innerText = 'New password and confirm password do not match.';
+                    return;
+                }
+                const passError = validatePassword(newPassword);
+                if (passError) {
+                    statusEl.style.color = '#e74c3c';
+                    statusEl.innerText = passError;
+                    return;
+                }
+            }
+
+            try {
+                const credential = EmailAuthProvider.credential(user.email, currentPassword);
+                await reauthenticateWithCredential(user, credential);
+                
+                if (newEmail && newEmail !== user.email) {
+                    await updateEmail(user, newEmail);
+                }
+                
+                if (newPassword) {
+                    await updatePassword(user, newPassword);
+                }
+                
+                statusEl.style.color = '#27ae60';
+                statusEl.innerText = 'Account updated successfully!';
+                setTimeout(() => accountModal.classList.remove('active'), 2000);
+            } catch (error) {
+                statusEl.style.color = '#e74c3c';
+                statusEl.innerText = error.message.replace('Firebase: ', '');
+            }
+        });
+
+        document.querySelectorAll('.toggle-password').forEach(icon => {
+            icon.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    this.classList.remove('fa-eye');
+                    this.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    this.classList.remove('fa-eye-slash');
+                    this.classList.add('fa-eye');
+                }
+            });
+        });
+
+        const privacyModal = document.getElementById('privacyModal');
+
+        const getAllUserSessions = async () => {
+            const user = auth.currentUser;
+            if (!user) return [];
+            try {
+                const devicesRef = ref(db, `user_devices/${user.uid}`);
+                const snapshot = await get(devicesRef);
+                if (snapshot.exists()) {
+                    return Object.values(snapshot.val()) || [];
+                }
+            } catch (err) {
+                console.error('Error fetching user sessions:', err);
+            }
+            return [];
+        };
+
+        const removeDeviceSession = async (deviceId) => {
+            const user = auth.currentUser;
+            if (!user) return;
+            try {
+                const deviceRef = ref(db, `user_devices/${user.uid}/${deviceId}`);
+                await remove(deviceRef);
+            } catch (err) {
+                console.error('Error removing device session:', err);
+            }
+        };
+
+        document.getElementById('btnReviewPrivacy').addEventListener('click', async () => {
+            privacyModal.classList.add('active');
+            const ipField = document.getElementById('privIpAddress');
+            const deviceList = document.getElementById('privDeviceList');
+            const statusEl = document.getElementById('privacyStatus');
+            const user = auth.currentUser;
+            
+            ipField.value = 'Fetching network details...';
+            deviceList.innerHTML = '<div style="text-align: center; color: #888; padding: 15px;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Scanning active sessions...</div>';
+            statusEl.innerText = '';
+            
+            try {
+                const currentIp = await fetchIpAddress();
+                ipField.value = currentIp;
+                
+                const currentSession = await saveDeviceSession(user, currentIp);
+                const allSessions = await getAllUserSessions();
+                
+                let deviceListHTML = '';
+                
+                allSessions.forEach((session) => {
+                    const isCurrentDevice = session.id === generateDeviceId();
+                    const statusBg = isCurrentDevice ? 'rgba(46, 204, 113, 0.1)' : 'rgba(255, 255, 255, 0.3)';
+                    const statusColor = isCurrentDevice ? '#27ae60' : '#64748b';
+                    const statusText = isCurrentDevice ? 'Current Device' : 'Other Device';
+                    
+                    deviceListHTML += `
+                        <div class="device-session-item" data-device-id="${session.id}" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #e2e8f0; background: ${statusBg}; border-radius: 8px; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(13, 110, 253, 0.1); display: flex; align-items: center; justify-content: center; color: #0d6efd; font-size: 1.2rem;">
+                                    <i class="fas ${session.icon}"></i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <strong style="color: #1e293b; font-size: 0.95rem;">${session.deviceName}</strong>
+                                        <span style="color: ${statusColor}; font-size: 0.7rem; font-weight: bold; background: rgba(0, 0, 0, 0.05); padding: 2px 8px; border-radius: 12px;">${statusText}</span>
+                                    </div>
+                                    <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px;">
+                                        <div><i class="fas fa-globe" style="margin-right: 5px; opacity: 0.6;"></i>IP: ${session.ip}</div>
+                                        <div style="margin-top: 2px;"><i class="fas fa-clock" style="margin-right: 5px; opacity: 0.6;"></i>Last active: ${session.lastActive}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-left: 12px;">
+                                ${!isCurrentDevice ? `<button class="device-signout-btn" data-device-id="${session.id}" style="background: #e74c3c; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; white-space: nowrap;">Sign Out</button>` : '<span style="color: #64748b; font-size: 0.85rem;">Active</span>'}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                if (allSessions.length === 0) deviceListHTML = '<div style="text-align: center; color: #888; padding: 15px;">No sessions found.</div>';
+                
+                deviceList.innerHTML = deviceListHTML;
+                
+                document.querySelectorAll('.device-signout-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const deviceId = btn.getAttribute('data-device-id');
+                        if (!confirm("Are you sure you want to sign out this device? It will need to log in again.")) return;
+                        
+                        btn.disabled = true;
+                        btn.innerText = "Signing out...";
+                        statusEl.style.color = '#f39c12';
+                        statusEl.innerText = 'Processing sign-out...';
+                        
+                        try {
+                            await removeDeviceSession(deviceId);
+                            
+                            document.querySelector(`[data-device-id="${deviceId}"]`).style.opacity = "0.5";
+                            btn.innerText = "Signed Out";
+                            btn.style.background = "#cbd5e1";
+                            
+                            statusEl.style.color = '#27ae60';
+                            statusEl.innerText = 'Device signed out successfully!';
+                            
+                            setTimeout(async () => {
+                                const targetElem = document.querySelector(`[data-device-id="${deviceId}"]`);
+                                if(targetElem) targetElem.remove();
+                                const remainingSessions = await getAllUserSessions();
+                                if (remainingSessions.length <= 1) {
+                                    deviceList.innerHTML = '<div style="text-align: center; color: #888; padding: 15px;">Only current device is logged in.</div>';
+                                }
+                                statusEl.innerText = '';
+                            }, 1500);
+                        } catch (err) {
+                            statusEl.style.color = '#e74c3c';
+                            statusEl.innerText = 'Error signing out device.';
+                            btn.disabled = false;
+                            btn.innerText = "Sign Out";
+                        }
+                    });
+                });
+            } catch (err) {
+                ipField.value = 'Unable to fetch IP remotely';
+                deviceList.innerHTML = '<div style="color: #e74c3c; text-align: center; padding: 15px;"><i class="fas fa-exclamation-circle" style="margin-right: 8px;"></i>Failed to load device sessions.</div>';
+            }
+        });
+
+        document.getElementById('btnCancelPrivacyTop').addEventListener('click', () => privacyModal.classList.remove('active'));
+
+        document.getElementById('btnCancelPrivacy').addEventListener('click', () => privacyModal.classList.remove('active'));
+
+        document.getElementById('btnSignOutOtherDevices').addEventListener('click', async () => {
+            const statusEl = document.getElementById('privacyStatus');
+            const btn = document.getElementById('btnSignOutOtherDevices');
+            
+            if (!confirm("Are you sure you want to sign out all other active sessions? They will be required to log in again.")) return;
+
+            btn.disabled = true;
+            btn.innerText = "Revoking access...";
+            statusEl.style.color = '#f39c12';
+            statusEl.innerText = 'Communicating with security server...';
+            
+            try {
+                const allSessions = await getAllUserSessions();
+                const currentDeviceId = generateDeviceId(); 
+                
+                for (const session of allSessions) {
+                    if (session.id !== currentDeviceId) {
+                        await removeDeviceSession(session.id);
+                    }
+                }
+                
+                statusEl.style.color = '#27ae60';
+                statusEl.innerText = 'Success! Other sessions have been revoked.';
+                btn.innerText = "Sign out other devices";
+                btn.disabled = false;
+                
+                const otherDevices = document.querySelectorAll('.device-session-item');
+                otherDevices.forEach(el => {
+                    if(el.getAttribute('data-device-id') !== currentDeviceId) {
+                        el.style.opacity = "0.5";
+                        el.querySelector('.device-signout-btn')?.remove();
+                    }
+                });
+            } catch (err) {
+                statusEl.style.color = '#e74c3c';
+                statusEl.innerText = 'Error revoking sessions.';
+                btn.disabled = false;
+                btn.innerText = "Sign out other devices";
+            }
+        });
+
+        document.getElementById('btnSignOut').addEventListener('click', () => {
+            showConfirmModal('exit', async () => {
+                try {
+                    const user = auth.currentUser;
+                    if (user) {
+                        await fetch('/api/log-user-logout', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: user.email, userId: user.uid })
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error logging logout:', err);
+                }
+                
+                cleanupDeviceListener();
+                signOut(auth).then(() => {
+                    localStorage.removeItem('psa_admin_token');
+                    localStorage.removeItem('psa_role');
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.href = "/login.html";
+                }).catch(err => {
+                    console.error('Error during logout:', err);
+                    window.location.href = "/login.html";
+                });
+            });
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const cards = document.querySelectorAll('.glass-card, .value-mini-card, .quality-policy-shifted-card');
+            
+            cards.forEach(card => {
+                card.style.cursor = "pointer"; 
+                
+                card.addEventListener('click', () => {
+                    openModal(card);
+                });
+            });
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const modalOverlay = document.getElementById('custom-glass-modal');
+            const modalContent = document.getElementById('modal-dynamic-content');
+            
+            const cards = document.querySelectorAll('.glass-card, .value-mini-card, .quality-policy-shifted-card');
+            
+            cards.forEach(card => {
+                card.style.cursor = "pointer"; 
+                
+                card.addEventListener('click', () => {                        
+                    modalContent.innerHTML = "";
+                    modalContent.innerHTML = card.innerHTML;
+                    modalOverlay.classList.add('active');
+                });
+            });
+
+            const closeBtn = document.querySelector('.modal-close-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', (event) => {
+                    event.stopPropagation(); 
+                    closeModal();
+                });
+            }
+
+            modalOverlay.addEventListener('click', () => {
+                closeModal();
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    closeModal();
+                }
+            });
+
+            function closeModal() {
+                modalOverlay.classList.remove('active');
+            }
+        });
+
+    </script>
+</body>
+</html>

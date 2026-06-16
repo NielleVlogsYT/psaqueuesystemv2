@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSA Queue - Create User</title>
+    <link rel="icon" type="image/png" href="./res/PSA.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            
+            font-family: 'Inter', sans-serif; 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+           background: linear-gradient(135deg, rgba(15, 32, 39, 0.85), rgba(32, 58, 67, 0.85), rgba(44, 83, 100, 0.85)), url('./res/Philippine-Statistics-Authority-PSA.png') center / cover fixed;
+            color: #000000;  
+            animation: fadeIn 0.6s ease-in-out forwards; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(1, 61, 129, 0.25), rgba(7, 112, 233, 0.25)), url('./res/Philippine-Statistics-Authority-PSA.png') center / cover fixed; color: #1f2a3a; }
+        
+        @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+
+        @media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }
+        
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            z-index: 2;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.93);
+            font-size: 0.95rem;
+        }
+
+        /* --- GLASSMORPHISM CARD --- */
+        .glass-card { 
+            background: rgba(108, 108, 108, 0.826);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 40px; 
+            border-radius: 20px; 
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255,255,255,0.05); 
+            position: relative; 
+        }
+
+        .input-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .input-group { flex: 1; text-align: left; margin-bottom: 20px; }
+        .input-row .input-group { margin-bottom: 0; }
+        
+        .input-label { display: block; font-size: 0.8rem; color: rgba(251, 251, 251, 0.8); margin-bottom: 8px; margin-left: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;}
+        .input-wrapper { position: relative; }
+        .input-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.6); font-size: 1rem; z-index: 5;}
+        
+        .input-group input, .input-group select { 
+            width: 100%; padding: 14px 15px 14px 45px; 
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; 
+            font-size: 0.95rem; font-family: inherit; transition: all 0.3s ease; 
+            background: rgba(0, 0, 0, 0.2); color: #ffffff;
+        }
+        
+        .input-group input:focus, .input-group select:focus { 
+            border-color: rgba(255,255,255,0.6); outline: none; background: rgba(0, 0, 0, 0.3);
+        }
+        .input-group input::placeholder { color: rgba(255,255,255,0.4); }
+        .input-group select option { background: #203a43; color: white; }
+        
+        .btn-primary { 
+            width: 100%; padding: 16px; 
+            background: rgba(0, 17, 255, 0.282); color: #ffffff; 
+            border: 1px solid rgba(0, 17, 255, 0.282); border-radius: 12px; 
+            font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; 
+            backdrop-filter: blur(10px); margin-top: 10px;
+        }
+        .btn-primary:hover { background: rgba(0, 198, 255, 0.4); transform: translateY(-2px); }
+
+        .btn-back {
+            display: inline-block;
+            margin-top: 20px;
+            color: rgba(19, 19, 19, 0.7);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+        .btn-back:hover { color: #fff; }
+        .btn-back i { margin-right: 5px; }
+
+        .status-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 15px; font-weight: 700; text-align: center;}
+
+        /* Modal specific to this page */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { 
+            background: rgba(30, 45, 60, 0.8); border-radius: 20px; padding: 30px; 
+            max-width: 450px; width: 90%; border: 1px solid rgba(255,255,255,0.2); text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Create Account</h1>
+            <p>Create a new staff or admin account</p>
+        </div>
+
+        <div class="glass-card">
+            <form id="createUserForm">
+                
+                <div class="input-row">
+                    <div class="input-group" style="flex: 2;">
+                        <label class="input-label">First Name</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="fName" required placeholder="First Name">
+                        </div>
+                    </div>
+                    <div class="input-group" style="flex: 2;">
+                        <label class="input-label">Last Name</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="lName" required placeholder="Last Name">
+                        </div>
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label class="input-label">M.I.</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-id-card"></i>
+                            <input type="text" id="mInitial" maxlength="2" placeholder="e.g. A">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-row">
+                    <div class="input-group">
+                        <label class="input-label">Employee ID</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-hashtag"></i>
+                            <input type="text" id="empId" required placeholder="Employee ID Number">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">System Role</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user-shield"></i>
+                            <select id="userRole">
+                                <option value="controller">Queue Staff</option>
+                                <option value="admin">System Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="input-label">Account Email</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="userEmail" required placeholder="company.email@example.com">
+                    </div>
+                </div>
+
+                <button type="submit" id="btnCreate" class="btn-primary">Create Account</button>
+                <div id="statusMsg" class="status-msg"></div>
+            </form>
+            
+            <div style="text-align: center;">
+                <a href="admin_dashboard.html" class="btn-back"><i class="fas fa-arrow-left"></i> Return to Admin Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- UPDATED: Modal no longer shows the password on screen for security -->
+    <div id="successModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="color: #38ef7d; margin-bottom: 10px;">User Created!</h2>
+            <p style="color: rgba(255,255,255,0.8); font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px;">
+                Account successfully registered. A temporary password has been generated and securely emailed to the user at <strong id="sentEmailAddress" style="color: #00c6ff;"></strong>.
+            </p>
+            
+            <button id="btnCopyClose" class="btn-primary" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3);">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        // Added signOut to the imports
+        import { getAuth, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+        // Security check: Ensure the person viewing this is actually logged in as admin
+        if(localStorage.getItem('psa_role') !== 'admin') {
+            alert("Unauthorized Access. Redirecting to login.");
+            window.location.href = "login.html";
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
+            authDomain: "queue-project-login.firebaseapp.com",
+            projectId: "queue-project-login",
+            storageBucket: "queue-project-login.firebasestorage.app",
+            messagingSenderId: "869956656004",
+            appId: "1:869956656004:web:3d2a98bea880c701605bd1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app); // Primary auth
+
+        // NEW: Secondary Firebase instance to prevent overriding the current admin session
+        const secondaryApp = initializeApp(firebaseConfig, "UserCreationInstance");
+        const secondaryAuth = getAuth(secondaryApp);
+
+        // Helper to generate a complex temporary password meeting your system's criteria
+        function generateTempPassword() {
+            const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+            let pass = "";
+            pass += "A"; pass += "a"; pass += "1"; pass += "!";
+            for(let i=0; i<6; i++) {
+                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return pass.split('').sort(() => 0.5 - Math.random()).join('');
+        }
+
+        document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnCreate');
+            const status = document.getElementById('statusMsg');
+            
+            const fName = document.getElementById('fName').value.trim();
+            const lName = document.getElementById('lName').value.trim();
+            const mInitial = document.getElementById('mInitial').value.trim();
+            const empId = document.getElementById('empId').value.trim();
+            const role = document.getElementById('userRole').value;
+            const email = document.getElementById('userEmail').value.trim();
+
+            if(!fName || !lName || !empId || !email) {
+                status.innerText = "Please fill in all required fields.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Validating details...";
+            status.innerText = "";
+
+            try {
+                // PRE-FLIGHT CHECK: Verify if Email or Employee ID already exists in MongoDB
+                const checkRes = await fetch('/api/check-user-exists', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, employeeId: empId })
+                });
+                
+                const checkData = await checkRes.json();
+
+                if (checkData.exists) {
+                    status.innerText = `Error: An account with this ${checkData.field} already exists.`;
+                    btn.disabled = false;
+                    btn.innerText = "Create Account";
+                    return; // Stop the process here
+                }
+
+                btn.innerText = "Creating account & sending email...";
+                const tempPassword = generateTempPassword();
+
+                // 1. Create account in Firebase using secondaryAuth
+                const userCred = await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
+                
+                // Immediately sign out the newly created user to keep secondaryAuth clean
+                await signOut(secondaryAuth);
+
+                // 2. Save extended profile details & role to your backend database
+                await fetch('/api/set-role', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        email: email, 
+                        role: role,
+                        firstName: fName,
+                        lastName: lName,
+                        middleInitial: mInitial,
+                        employeeId: empId
+                    }) 
+                });
+
+                // 3. Send the Welcome Email to the User
+                await fetch('/api/send-welcome-email', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, tempPassword: tempPassword, firstName: fName }) 
+                });
+
+                // 4. Show Success Modal
+                document.getElementById('sentEmailAddress').innerText = email;
+                document.getElementById('successModal').classList.add('active');
+
+                // Reset Form
+                document.getElementById('createUserForm').reset();
+
+            } catch (error) {
+                console.error(error);
+                if (error.code === 'auth/email-already-in-use') {
+                    status.innerText = "Error: An account with this Email already exists in Firebase.";
+                } else {
+                    status.innerText = error.message.replace("Firebase: ", "");
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Create Account";
+            }
+        });
+
+        document.getElementById('btnCopyClose').addEventListener('click', () => {
+            document.getElementById('successModal').classList.remove('active');
+        });
+    </script>
+</body>
+</html>

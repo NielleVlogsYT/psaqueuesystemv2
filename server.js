@@ -39,12 +39,16 @@ const io = new Server(server);
 
 // --- EMAIL TRANSPORTER SETUP ---
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Use SSL/TLS
     auth: {
-        user: 'jhondenielle.psa@gmail.com', 
-        // Instead of hardcoding the password, we pull it securely from the system environment
-        pass: process.env.GMAIL_APP_PASS 
-    }
+        user: 'jhondenielle.psa@gmail.com',
+        pass: process.env.GMAIL_APP_PASS // Uses your Render Env Variable safely
+    },
+    connectionTimeout: 10000, // 10 seconds timeout limit
+    greetingTimeout: 10000,
+    socketTimeout: 10000
 });
 
 const windowLocks = {};

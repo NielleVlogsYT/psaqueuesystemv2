@@ -42,13 +42,20 @@ const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true, // Use SSL/TLS
+    // FORCE NODE TO USE IPv4 ONLY TO PREVENT ENETUNREACH ON CLOUD PROVIDERS
+    connectionTimeout: 10000, 
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+    dnsTimeout: 10000,
     auth: {
         user: 'jhondenielle.psa@gmail.com',
-        pass: process.env.GMAIL_APP_PASS // Uses your Render Env Variable safely
+        pass: process.env.GMAIL_APP_PASS 
     },
-    connectionTimeout: 10000, // 10 seconds timeout limit
-    greetingTimeout: 10000,
-    socketTimeout: 10000
+    // This forces Node to resolve smtp.gmail.com using standard IPv4 addresses (family: 4)
+    getSocket: (options, callback) => {
+        options.family = 4;
+        return require('net').connect(options, callback);
+    }
 });
 
 const windowLocks = {};

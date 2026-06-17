@@ -8,8 +8,26 @@ const nodemailer = require('nodemailer');
 
 // --- FIREBASE ADMIN SDK SETUP ---
 const admin = require('firebase-admin');
-// Ensure you have downloaded this file from your Firebase Project Settings -> Service Accounts
-const serviceAccount = require('./serviceAccountKey.json'); 
+
+let serviceAccount;
+
+// Check for environment variable first (Production/Render environment)
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } catch (err) {
+    console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env variable as JSON:", err.message);
+    process.exit(1);
+  }
+} else {
+  // Fallback to local file (Local development environment)
+  try {
+    serviceAccount = require('./serviceAccountKey.json');
+  } catch (err) {
+    console.error("❌ Firebase credentials missing! Provide FIREBASE_SERVICE_ACCOUNT env var or serviceAccountKey.json");
+    process.exit(1);
+  }
+}
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)

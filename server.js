@@ -41,8 +41,9 @@ const io = new Server(server);
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'jhondenielle.psa@gmail.com',
-        pass: 'tbjhokalnfyfynzd'
+        user: 'jhondenielle.psa@gmail.com', 
+        // Instead of hardcoding the password, we pull it securely from the system environment
+        pass: process.env.GMAIL_APP_PASS 
     }
 });
 

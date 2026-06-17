@@ -111,6 +111,29 @@ async function performDailyReset() {
     }
 }
 
+async function resetTodayQueueCounters() {
+    try {
+        Object.values(requeueTimers).forEach(clearTimeout);
+        requeueTimers = {};
+
+        ticketSequences = { national: 1, civil: 1 };
+        ticketSequenceDate = getTodayString();
+        queueStore.waiting = { national: [], civil: [] };
+        queueStore.currentServing = {
+            national: { window1: null, window2: null, priorityWindow: null },
+            civil: { window1: null, window2: null, priorityWindow: null }
+        };
+
+        await saveCurrentState();
+        io.emit('queue_update', { currentServing: queueStore.currentServing, waitingQueue: queueStore.waiting });
+        io.emit('ticket_logs_updated');
+        io.emit('master_history_updated');
+        console.log('🔄 Today queue reset after same-day delete_range operation.');
+    } catch (err) {
+        console.error('Today queue reset failed:', err);
+    }
+}
+
 function scheduleMidnightReset() {
     const now = new Date();
     const nextMidnight = new Date(now);
@@ -490,9 +513,19 @@ app.post('/api/system-logs/delete_range', async (req, res) => {
             }
         }
 
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const tomorrowStart = new Date(todayStart);
+        tomorrowStart.setDate(todayStart.getDate() + 1);
+        const rangeIncludesToday = startDate < tomorrowStart && endDate > todayStart;
+
+        if (rangeIncludesToday && targets.includes('ticket_logs')) {
+            await resetTodayQueueCounters();
+        }
+
         io.emit('ticket_logs_updated');
         io.emit('master_history_updated');
-        res.json({ success: true, deleted: results });
+        res.json({ success: true, deleted: results, resetTodayQueue: rangeIncludesToday && targets.includes('ticket_logs') });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

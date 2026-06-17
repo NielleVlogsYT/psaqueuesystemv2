@@ -7,9 +7,8 @@
     <link rel="icon" type="image/png" href="./res/PSA.png">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
-        /* If you have Trajan font files, place them in ./res/fonts/ and this will load them */
         @font-face {
             font-family: 'TrajanPro';
             src: url('./res/fonts/TrajanPro-Regular.woff2') format('woff2'),
@@ -20,15 +19,15 @@
             font-display: swap;
         }
         :root {
-            --bg-glass: rgba(25, 35, 60, 0.55);
-            --header-bg: #0b2740; /* solid header background */
-            --border-glass: rgba(255, 255, 255, 0.25);
-            --radius-lg: 0;
-            --radius-md: 0;
+            --bg-dark: #071426;
+            --panel-bg: rgba(15, 32, 67, 0.7);
+            --card-bg: rgba(255, 255, 255, 0.06);
+            --card-border: rgba(255, 255, 255, 0.12);
             --text-light: #f8f9fa;
+            --text-muted: #94a3b8;
             --psa-gold: #ffd700;
-            --glow-blue: rgba(0, 123, 255, 0.6);
-            --glow-green: rgba(184, 127, 15, 0.75);
+            --accent-blue: #38bdf8;
+            --accent-green: #f59e0b;
         }
 
         * {
@@ -39,530 +38,402 @@
             height: 100vh;
             width: 100vw;
             margin: 0;
-            overflow: hidden; /* Locks the page so it never scrolls externally */
-            font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             color: var(--text-light);
+            background-color: var(--bg-dark);
         }
 
-        /* Background wrapper */
         .landscape-wrapper {
             height: 100vh;
             width: 100vw;
             display: flex;
             flex-direction: column;
-            padding: clamp(10px, 2vw, 20px);
-            background: linear-gradient(135deg, rgba(10, 25, 60, 0.85), rgba(15, 45, 90, 0.85)), url('./res/PSA-BG.png') center/cover fixed;
+            padding: 20px 20px 0 20px;
+            background: radial-gradient(circle at top right, rgba(16, 45, 107, 0.9), rgba(6, 15, 38, 0.95)), url('./res/PSA-BG.png') center/cover fixed;
             background-blend-mode: overlay;
-            box-sizing: border-box;
         }
 
-        /* Header – responsive stacking */
+        /* Header Layout */
         .main-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 18px;
-            padding: 22px 24px;
-            margin-bottom: 24px;
-            background: var(--header-bg) !important;
-            border: 1px solid rgba(255,255,255,0.3) !important;
-            border-radius: 0;
-            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            background: rgba(11, 39, 64, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
         }
 
         .header-logo-area {
             display: flex;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
+            gap: 20px;
         }
 
-        /* Logo image (no extra wrapper) */
         .psa-logo {
-            width: clamp(60px, 10vw, 180px);
-            height: clamp(60px, 10vw, 180px);
-            object-fit: cover;
-            background: transparent;
-            border-radius: 50%;
-            display: block;
-            padding: 0;
-            box-shadow: 0 8px 22px rgba(0,0,0,0.4);
-            border: 0.5px solid rgba(0,0,0,0.08);
-            overflow: hidden;
+            width: clamp(60px, 6vw, 100px);
+            height: clamp(60px, 6vw, 100px);
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));
         }
 
         .header-title-container h2 {
-            font-size: clamp(1.2rem, 5vw, 2.8rem);
+            font-size: clamp(1.4rem, 2.5vw, 2.4rem);
             font-weight: 900;
-            line-height: 1.2;
             margin: 0;
             color: var(--text-light);
+            letter-spacing: 1.5px;
+            font-family: 'TrajanPro', 'Trajan', 'Cinzel', serif;
+        }
+
+        .header-title-container h4 {
+            font-family: 'TrajanPro', 'Trajan', serif;
+            font-weight: 700;
+            margin: 4px 0 0;
+            color: var(--text-light);
             letter-spacing: 1px;
-            font-family: 'TrajanPro', 'Trajan', 'Cinzel', serif; /* Use TrajanPro if provided, else fallbacks */
-        }
-
-        .header-title-container h2 span.highlight {
-            color: var(--psa-gold);
-            text-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
-        }
-
-        .header-title-container h6 {
-            font-size: clamp(0.7rem, 3vw, 1.2rem);
-            font-weight: 600;
-            color: #adb5bd;
-            margin: 0;
         }
 
         .clock-container {
             text-align: right;
-            margin-left: auto;
         }
 
         .clock-display {
-            font-family: 'Segoe UI', monospace;
-            font-size: clamp(2.2rem, 6vw, 3.6rem);
+            font-family: 'Inter', monospace;
+            font-size: clamp(2rem, 3.5vw, 3rem);
             font-weight: 900;
             color: var(--psa-gold);
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.38);
-            line-height: 1.05;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.25);
+            line-height: 1;
         }
 
         .date-display {
-            font-size: clamp(1.1rem, 3vw, 1.6rem);
-            font-weight: 700;
-            color: #ced4da;
-            margin-top: 8px;
+            font-size: clamp(0.9rem, 1.2vw, 1.2rem);
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        @media (max-width: 767px) {
-            .main-header {
-                flex-direction: column;
-                text-align: center;
-            }
-            .clock-container {
-                text-align: center;
-                width: 100%;
-            }
-            .header-logo-area {
-                justify-content: center;
-            }
+        /* Main Content Workspace */
+        .departments-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0; 
+            margin-bottom: 15px;
         }
 
-        /* Service rows */
         .service-row {
             flex: 1;
             display: flex;
-            flex-wrap: wrap;
-            gap: clamp(10px, 2vw, 20px);
-            margin-bottom: clamp(10px, 2vw, 20px);
-            min-height: 0; /* Crucial: Prevents flex items from overflowing the screen */
-        }
-
-        /* Combined departments wrapper (dark blue background) */
-        .departments-wrapper {
-            background: linear-gradient(135deg, #153b6a, #0e2543); /* darker, higher contrast wrapper */
-            padding: clamp(12px, 2vw, 30px);
-            border-radius: 0;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.22);
-            margin-bottom: clamp(10px, 2vw, 20px);
-            color: #f8f9fa;
-            border: 1px solid rgba(255,255,255,0.16);
-        }
-
-        /* Glass panels */
-        .glass-panel {
-            background: var(--bg-glass);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--border-glass);
-            border-radius: 0;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-            height: 100%; 
-        }
-
-        .departments-wrapper .glass-panel {
-            background: rgba(255, 255, 255, 0.7); /* lighter translucent white for contrast on gray */
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(16, 24, 32, 0.12);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
-        }
-
-        .departments-wrapper .glass-panel {
-            background: rgba(25, 35, 60, 0.5); /* semi-transparent dark for dark blue wrapper */
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255,255,255,0.15);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            gap: 20px;
+            min-height: 0;
+            background: rgba(11, 39, 64, 0.95);
+            border: 3px solid #0b2740;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
         }
 
         .serving-main {
             flex: 3;
-            min-width: 240px;
-            padding: clamp(12px, 2vw, 25px);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
         }
 
         .waiting-sidebar {
-            flex: 1;
-            min-width: 250px;
-            padding: clamp(10px, 2vw, 20px);
-            background: transparent;
+            flex: 1.2;
+            min-width: 320px;
             display: flex;
             flex-direction: column;
+            gap: 15px;
+            background: #f4f6fb;
+            padding: 15px;
         }
 
-        .departments-wrapper .waiting-sidebar {
-            background: transparent;
-            padding: 0;
-        }
-
-        /* Department tags */
+        /* Tags */
         .dept-tag {
-            font-size: clamp(1.15rem, 3vw, 1.8rem);
+            font-size: 1.1rem;
             font-weight: 900;
             letter-spacing: 2px;
             text-transform: uppercase;
-            padding: 10px 18px;
-            border-radius: 0;
-            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-            display: inline-block;
-            margin-bottom: 20px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-            border: 1px solid rgba(255,255,255,0.28);
+            padding: 8px 16px;
+            margin-bottom: 15px;
+            align-self: flex-start;
+            border-radius: 4px;
         }
+        .tag-nid { background: #0284c7; color: white; }
+        .tag-civ { background: #d97706; color: white; }
 
-        .tag-nid { background: linear-gradient(135deg, #0056b3, #0033a0); color: white; }
-        .tag-civ { background: linear-gradient(135deg, #ffd700, #e6c200); color: #1f1f1f; }
-
-        /* Window cards – responsive flex */
-        .d-flex.gap-3 {
+        /* Counter Window Cards Layout */
+        .cards-grid {
             display: flex;
-            flex-wrap: wrap;
             gap: 15px;
+            flex: 1;
+            min-height: 0;
         }
 
         .window-card {
-            background: #ffffff;
-            border-radius: 0;
-            padding: clamp(20px, 3vw, 28px);
+            background: #f8fafc;
+            border: 3px solid #000000;
+            padding: 20px;
             text-align: center;
-            flex: 1 1 170px;
-            min-width: 160px;
+            flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: stretch;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            justify-content: space-between;
+            align-items: center;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            color: #0f172a;
         }
 
         .win-title {
-            font-size: clamp(1.1rem, 2.5vw, 1.6rem);
-            color: #374151;
+            font-size: clamp(1rem, 1.5vw, 1.3rem);
             text-transform: uppercase;
-            font-weight: 900;
-            letter-spacing: 1px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: #0f172a;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
-            gap: 0.75rem;
-            width: 100%;
-            text-align: left;
-            margin-bottom: 1rem;
-        }
-
-        .win-title i {
-            font-size: 1.1em;
-            margin-right: 0.5rem;
-        }
-
-        .departments-wrapper .win-title {
-            color: #374151; /* dark gray on white background */
+            gap: 8px;
+            transition: color 0.3s ease;
         }
 
         .ticket-number {
-            font-size: clamp(2.4rem, 7vw, 6rem);
+            font-size: clamp(3rem, 5.5vw, 5.5rem);
             font-weight: 900;
-            line-height: 1.1;
-            margin: 10px 0;
-            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
-            word-break: break-word;
-            letter-spacing: 0.04em;
-            color: #111827;
+            line-height: 1;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -1px;
+            margin: auto 0;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
         }
 
-        .win-title {
-            font-size: clamp(1.1rem, 2.5vw, 1.6rem);
-            color: #374151;
-            text-transform: uppercase;
-            font-weight: 900;
-            letter-spacing: 1px;
+        /* Neon Indicators per Status Rule */
+        .window-card.closing { opacity: 0.4; }
+        .window-card.closing .ticket-number { color: var(--text-muted); text-shadow: none; }
+        .window-card.closing .win-title { color: #0f172a; }
+
+        .active-blue { border: 3px solid var(--accent-blue); }
+        .active-blue:not(.closing) .ticket-number { color: var(--accent-blue); text-shadow: 0 0 30px rgba(56, 189, 248, 0.3); }
+        .active-blue:not(.closing) .win-title { color: var(--accent-blue); }
+
+        .active-green { border: 3px solid var(--accent-green); }
+        .active-green:not(.closing) .ticket-number { color: var(--accent-green); text-shadow: 0 0 30px rgba(245, 158, 11, 0.3); }
+        .active-green:not(.closing) .win-title { color: var(--accent-green); }
+
+        /* Queue Lists Structure */
+        .queue-block {
+            flex: 1;
             display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 0.75rem;
-            width: 100%;
-            text-align: left;
-            margin-bottom: 1rem;
-            font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+            flex-direction: column;
+            min-height: 0;
         }
 
-        .window-card.closed .ticket-number {
-            color: #6b7280;
-            text-shadow: none;
-            letter-spacing: 0.18rem;
-        }
-
-        .active-blue .ticket-number {
-            color: #0c63ff;
-            text-shadow: none;
-        }
-
-        .active-green .ticket-number {
-            color: #b87f0f;
-            text-shadow: none;
-        }
-
-        .window-card.active-green .win-title {
-            color: #b87f0f;
-        }
-        .window-card.active-green .win-title i,
-        .window-card.active-green .win-title.text-success {
-            color: #b87f0f !important;
-        }
-
-        /* Waiting lists */
-        /* Blue container style like image 3 */
-        .blue-container {
-            background: linear-gradient(135deg, #1f3f7c, #112a55);
-            color: white;
-            padding: 16px 18px;
-            margin-bottom: 18px;
-            text-align: center;
-            border-radius: 0;
-            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            font-size: clamp(1.1rem, 3vw, 1.5rem);
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-        }
-
-        .waiting-header {
-            font-size: clamp(1.05rem, 3vw, 1.55rem);
+        .queue-title {
+            font-size: 0.85rem;
             font-weight: 800;
-            color: #000000;
-            padding: 14px 18px;
-            margin-bottom: 18px;
+            color: #0f172a;
             text-transform: uppercase;
-            letter-spacing: 0.12em;
-            background: linear-gradient(135deg, #ffd700, #e6c200);
-            border-radius: 0;
-            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(0, 0, 0, 0.24);
-            text-align: center;
-        }
-
-        .departments-wrapper .waiting-header {
-            color: #000000;
-            background: linear-gradient(135deg, #ffd700, #e6c200);
-            border: 1px solid rgba(0, 0, 0, 0.2);
-        }
-
-        .token-container {
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 1.25rem;
-            padding: 0;
-            margin: 0;
-            align-items: center;
+            justify-content: space-between;
         }
 
-        /* Enlarged, but responsive token rows for waiting/requeue lists */
+        .queue-title i {
+            color: #0f172a;
+        }
+
+        .queue-block.waiting-queue,
+        .queue-block.requeued-queue {
+            padding: 0;
+        }
+
+        .queue-block.waiting-queue .queue-title,
+        .queue-block.requeued-queue .queue-title {
+            color: #ffffff;
+            margin-bottom: 12px;
+            background: #38bdf8;
+            padding: 12px 14px;
+            border-radius: 12px;
+            box-shadow: 0 8px 18px rgba(56, 189, 248, 0.25);
+        }
+
+        .queue-block.waiting-queue .queue-title i,
+        .queue-block.requeued-queue .queue-title i {
+            color: #ffffff;
+        }
+
+        .token-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-auto-rows: minmax(56px, auto);
+            gap: 10px;
+            overflow: hidden;
+            flex: 1;
+        }
+
         .token-row {
             display: flex;
             align-items: center;
-            gap: 1rem;
-            padding: 16px 18px;
-            color: #ffffff;
-            font-weight: 900;
-            border: 1px solid rgba(255,255,255,0.18);
-            background: rgba(255,255,255,0.08);
-            margin-bottom: 1rem;
-            min-width: 0;
-            font-size: clamp(1rem, 3vw, 1.4rem);
-            border-radius: 0;
-        }
-
-        .token-row .token-label {
-            font-family: Arial, 'Helvetica Neue', monospace;
-            font-size: clamp(1rem, 3vw, 1.8rem);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            letter-spacing: 0.04em;
-            color: #ffffff;
-        }
-
-        .token-row .token-timer {
-            margin-left: auto;
-            background: rgba(0,0,0,0.88);
-            color: #ffffff;
-            padding: 8px 14px;
-            font-size: clamp(1rem, 3vw, 1.25rem);
-            border-radius: 0;
-            min-width: 60px;
-            text-align: center;
-            font-weight: 900;
-            line-height: 1.2;
+            justify-content: space-between;
+            padding: 6px 0;
+            background: transparent;
+            border: none;
+            color: #0f172a;
+            font-weight: 800;
+            font-size: 1.4rem;
+            width: 100%;
+            min-height: 58px;
         }
 
         .token-row.priority {
-            border-left: 4px solid #b87f0f;
-            padding-left: 8px;
-        }
-
-        .token-row.priority .token-label {
-            color: #b87f0f;
-        }
-
-        @media (max-width: 480px) {
-            .token-row { font-size: 1rem; padding: 8px 10px; }
-            .token-row .token-timer { margin-left: 8px; min-width: 44px; }
-        }
-
-        .waiting-more {
-            margin-left: auto;
-            align-self: center;
-            font-size: clamp(1rem, 3vw, 1.5rem);
-            color: #ffffff;
-            text-transform: uppercase;
-            letter-spacing: 0.09em;
-            padding: 0;
-            margin: 0;
             background: transparent;
             border: none;
-            box-shadow: none;
-            white-space: nowrap;
-            font-weight: 800;
+            color: #d97706;
+        }
+        .token-row.priority .token-label { color: #d97706; }
+
+        .token-label {
+            font-size: 1.45rem;
+            line-height: 1.1;
+            letter-spacing: 0.2px;
+        }
+
+        .token-timer {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 3px 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #000000;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            min-width: 52px;
+            text-align: center;
         }
 
         .waiting-text {
-            font-size: 1.1rem;
-            color: #ffffff;
-            padding: 0;
-            margin: 0;
-            background: transparent;
-            border: none;
-            box-shadow: none;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .waiting-more {
+            font-size: 0.85rem;
+            color: var(--psa-gold);
+            font-weight: 700;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .waiting-more-row {
+            padding: 12px 14px;
+            background: #fde68a;
+            border: 2px solid #f59e0b;
+            color: #92400e;
+            font-weight: 900;
+            text-align: center;
+            margin-top: 12px;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        /* Bottom Marquee Running Strip */
+        .ticker-strip {
+            height: 55px;
+            background: #ffffff;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0 -20px; 
+            display: flex;
+            align-items: center;
+            overflow: hidden;
             white-space: nowrap;
         }
 
-        .token-container .token-pill.prio {
-            color: #b87f0f;
-            border: none;
-            background: transparent;
-        }
-
-        .token-container .token-pill .requeue-timer {
-            font-size: clamp(0.9rem, 1.8vw, 1rem);
-            background: rgba(255,255,255,0.12);
-            padding: 4px 8px;
-            border-radius: 0;
+        .ticker-wrap {
             display: inline-block;
-            margin-top: 0.5rem;
+            padding-left: 100%;
+            animation: marquee 60s linear infinite;
         }
 
-        /* Audio unlock overlay – responsive */
+        .ticker-item {
+            display: inline-block;
+            padding-right: 4rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: black;
+
+        }
+
+        .ticker-item i {
+            color: var(--psa-gold);
+            margin-right: 12px;
+        }
+
+        @keyframes marquee {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+
+        /* Audio Overlay */
         .audio-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at center, rgba(15, 35, 75, 0.98), rgba(8, 18, 40, 0.99));
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(6, 15, 38, 0.98);
             z-index: 10000;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             backdrop-filter: blur(20px);
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+            transition: opacity 0.5s ease;
         }
 
         .audio-box {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border-glass);
-            border-radius: 0;
-            padding: 30px 25px;
+            background: var(--panel-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 40px;
             text-align: center;
-            max-width: 90%;
-            width: 500px;
-            margin: 20px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            max-width: 480px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
         }
 
-        @media (max-width: 550px) {
-            .audio-box {
-                padding: 20px;
-            }
-            .audio-box h3 {
-                font-size: 1.4rem;
-            }
-            .btn-lg {
-                font-size: 1rem;
-                padding: 10px 20px;
-            }
-        }
-
-        /* Animation for new call */
         @keyframes pulse-new {
-            0% { transform: scale(1); box-shadow: inset 0 0 0px rgba(255,255,255,0); }
-            50% { transform: scale(1.02); box-shadow: inset 0 0 20px rgba(255,255,255,0.2); }
-            100% { transform: scale(1); box-shadow: inset 0 0px 0px rgba(255,255,255,0); }
+            0%, 100% { background: var(--card-bg); transform: scale(1); }
+            50% { background: rgba(255, 215, 0, 0.15); transform: scale(1.01); }
         }
+        .new-call { animation: pulse-new 0.8s ease-in-out 4; }
 
-        .new-call {
-            animation: pulse-new 1s infinite;
-            background: rgba(255,255,255,0.15);
-        }
-
-        /* Extra small adjustments */
-        @media (max-width: 576px) {
-            .window-card {
-                min-width: 100%;
-                flex: 1 1 auto;
+        /* Layout Responsive Adaptation Rules */
+        @media (max-width: 991px) {
+            .service-row { flex-direction: column; height: auto; }
+            .waiting-sidebar { min-width: 100%; }
+            body, html { overflow-y: auto; height: auto; }
+            .landscape-wrapper { height: auto; }
+            .token-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 12px;
             }
-            .serving-main .d-flex.gap-3 {
-                flex-direction: column;
+            .token-row {
+                font-size: 1.25rem;
+                min-height: 52px;
             }
-            .token-pill {
-                width: 100%;
+            .token-label {
+                font-size: 1.3rem;
             }
-        }
-
-        /* Portrait Layout Fixes */
-        @media (max-aspect-ratio: 1/1) {
-            .service-row {
-                flex-direction: column;
-            }
-            
-            .serving-main, .waiting-sidebar {
-                width: 100%;
-                flex: auto;
-            }
-            
-            .waiting-sidebar {
-                max-height: 30vh; /* Limits waiting area height so active windows stay visible */
-            }
-            
-            .header-logo-area {
-                flex-direction: column;
-                text-align: center;
+            .token-timer {
+                font-size: 0.85rem;
+                padding: 2px 8px;
             }
         }
     </style>
@@ -571,11 +442,11 @@
 <body>
 <div id="audio-init-overlay" class="audio-overlay">
     <div class="audio-box">
-        <i class="fas fa-volume-up fa-4x mb-4 text-warning" style="filter: drop-shadow(0 0 15px rgba(255,215,0,0.4));"></i>
-        <h3 class="font-weight-bold text-white mb-2">Queue System Audio</h3>
-        <p style="color: #adb5bd; font-size: 1.05rem;" class="mb-4">Browsers block automatic voice generation until an explicit interaction occurs. Press below to enable voice announcements.</p>
-        <button id="btn-unlock-audio" class="btn btn-warning btn-lg font-weight-bold text-dark px-5 py-3" style="border-radius: 0; box-shadow: 0 10px 20px rgba(255,215,0,0.25);">
-            <i class="fas fa-play mr-2"></i> Enable System Voice
+        <i class="fas fa-volume-up fa-4x mb-4 text-warning" style="filter: drop-shadow(0 0 15px rgba(255,215,0,0.3));"></i>
+        <h4 class="font-weight-bold text-white mb-2">Queue System Audio Announcement</h4>
+        <p style="color: var(--text-muted); font-size: 0.95rem;" class="mb-4">Please enable the system audio module to authorize automatic live voice queue updates.</p>
+        <button id="btn-unlock-audio" class="btn btn-warning btn-lg font-weight-bold text-dark px-5 py-3" style="border-radius: 4px;">
+            <i class="fas fa-play mr-2"></i> Enable Voice System
         </button>
     </div>
 </div>
@@ -585,65 +456,87 @@
         <div class="header-logo-area">
             <img src="./res/PSA-removebg-preview.png" alt="PSA Logo" class="psa-logo">
             <div class="header-title-container">
-                <h2>Philippine Statistics Authority - PSO Bulacan</h2>
+                <h2>Philippine Statistics Authority</h2> 
+                <h4>Bulacan Provincial Statistical Office</h4> 
+                <div style="color: var(--psa-gold); font-weight: 800; font-size: 1.1rem; letter-spacing: 1px;"></div>
             </div>
         </div>
         <div class="clock-container">
             <div class="clock-display" id="realtime-clock">00:00:00 PM</div>
-            <div class="date-display" id="realtime-date">Loading date...</div>
+            <div class="date-display" id="realtime-date">Loading System Context Date...</div>
         </div>
     </div>
 
     <div class="departments-wrapper">
-    <div class="service-row">
-        <div class="serving-main">
-            <div class="dept-tag tag-nid">National ID</div>
-            <div class="d-flex gap-3">
-                <div class="window-card active-blue">
-                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 1</div>
-                    <div class="ticket-number" id="nid-w1">CLOSED</div>
+        <div class="service-row">
+            <div class="serving-main">
+                <div class="dept-tag tag-nid"><i class="fas fa-id-card mr-2"></i> National ID</div>
+                <div class="cards-grid">
+                    <div class="window-card active-blue" id="card-nid-w1">
+                        <div class="win-title"><i class="fas fa-desktop"></i> Window 1</div>
+                        <div class="ticket-number" id="nid-w1">CLOSED</div>
+                    </div>
+                    <div class="window-card active-blue" id="card-nid-w2">
+                        <div class="win-title"><i class="fas fa-desktop"></i> Window 2</div>
+                        <div class="ticket-number" id="nid-w2">CLOSED</div>
+                    </div>
+                    <div class="window-card active-green" id="card-nid-prio">
+                        <div class="win-title"><i class="fas fa-star"></i> Priority Window</div>
+                        <div class="ticket-number" id="nid-prio">CLOSED</div>
+                    </div>
                 </div>
-                <div class="window-card active-blue">
-                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 2</div>
-                    <div class="ticket-number" id="nid-w2">CLOSED</div>
+            </div>
+            <div class="waiting-sidebar">
+                    <div class="queue-block waiting-queue">
+                    <div class="queue-title"><span>Waiting Queue</span><i class="fas fa-users"></i></div>
+                    <div class="token-list" id="wait-nid"></div>
                 </div>
-                <div class="window-card active-green">
-                    <div class="win-title text-success"><i class="fas fa-star mr-2"></i> Priority</div>
-                    <div class="ticket-number" id="nid-prio">CLOSED</div>
+                <div class="queue-block requeued-queue">
+                    <div class="queue-title"><span>Requeued Tickets</span><i class="fas fa-history"></i></div>
+                    <div class="token-list" id="requeue-nid"></div>
                 </div>
             </div>
         </div>
-        <div class="waiting-sidebar">
-            <div class="blue-container">National ID Waiting Queue</div>
-            <div class="token-container" id="wait-nid"></div>
-            <div class="blue-container" style="margin-top: 25px;">Requeued Tickets</div>
-            <div class="token-container" id="requeue-nid"></div>
+
+        <div class="service-row">
+            <div class="serving-main">
+                <div class="dept-tag tag-civ"><i class="fas fa-file-invoice mr-2"></i> Civil Registration</div>
+                <div class="cards-grid">
+                    <div class="window-card active-blue" id="card-civ-w1">
+                        <div class="win-title"><i class="fas fa-desktop"></i> Window 1</div>
+                        <div class="ticket-number" id="civ-window-1">CLOSED</div>
+                    </div>
+                    <div class="window-card active-blue" id="card-civ-w2">
+                        <div class="win-title"><i class="fas fa-desktop"></i> Window 2</div>
+                        <div class="ticket-number" id="civ-window-2">CLOSED</div>
+                    </div>
+                </div>
+            </div>
+            <div class="waiting-sidebar">
+                    <div class="queue-block waiting-queue">
+                    <div class="queue-title"><span>Waiting Queue</span><i class="fas fa-users"></i></div>
+                    <div class="token-list" id="wait-civ"></div>
+                </div>
+                <div class="queue-block requeued-queue">
+                    <div class="queue-title"><span>Requeued Tickets</span><i class="fas fa-history"></i></div>
+                    <div class="token-list" id="requeue-civ"></div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="service-row">
-        <div class="serving-main">
-            <div class="dept-tag tag-civ">Civil Registration</div>
-            <div class="d-flex gap-3">
-                <div class="window-card active-blue">
-                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 1</div>
-                    <div class="ticket-number" id="civ-window-1">CLOSED</div>
-                </div>
-                <div class="window-card active-blue">
-                    <div class="win-title"><i class="fas fa-bullhorn mr-2"></i> Window 2</div>
-                    <div class="ticket-number" id="civ-window-2">CLOSED</div>
-                </div>
+    <div class="ticker-strip">
+        <div class="ticker-strip">
+            <div class="ticker-wrap">
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Welcome to Philippine Statistics Authority - Bulacan Provincial Statistical Office.</div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Website : https://rsso03.psa.gov.ph/bulacan </div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Appointment Website : https://appointment.psa.gov.ph/</div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Telephone Number : (044)662-3024</div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Email : bulacan@psa.gov.ph</div>
             </div>
         </div>
-        <div class="waiting-sidebar">
-            <div class="waiting-header">Civil Registration Waiting Queue</div>
-            <div class="token-container" id="wait-civ"></div>
-            <div class="waiting-header" style="margin-top: 25px;">Requeued Tickets</div>
-            <div class="token-container" id="requeue-civ"></div>
-        </div>
     </div>
-    </div>
-    </div>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -676,25 +569,18 @@
     let audioContextUnlocked = false;
     let targetSystemLocale = 'en-US';
     
-    // UPDATED EVENT LISTENER WITH FIXES
     document.getElementById('btn-unlock-audio').addEventListener('click', () => {
         audioContextUnlocked = true;
         const overlay = document.getElementById('audio-init-overlay');
-        
-        // FIX 1: Remove the backdrop filter right before fading out 
-        // This prevents the GPU from glitching when exposing the blurred panels underneath
         overlay.style.backdropFilter = 'none';
         overlay.style.webkitBackdropFilter = 'none';
-        
         overlay.style.opacity = '0';
         setTimeout(() => overlay.style.display = 'none', 500);
         
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            
-            // FIX 2: Use a space (" ") instead of an empty string ("") to prevent tab crashes
             const emptyUtterance = new SpeechSynthesisUtterance(" ");
-            emptyUtterance.volume = 0; // Mute the audio so it stays completely silent
+            emptyUtterance.volume = 0;
             window.speechSynthesis.speak(emptyUtterance);
         }
     });
@@ -712,26 +598,33 @@
         const serving = latestQueueState?.currentServing || {};
         const waiting = latestQueueState?.waitingQueue || { national: [], civil: [] };
 
-        updateNumber('nid-w1', serving.national?.window1?.label, 'National ID Window 1', activeWindows.national.window1);
-        updateNumber('nid-w2', serving.national?.window2?.label, 'National ID Window 2', activeWindows.national.window2);
-        updateNumber('nid-prio', serving.national?.priorityWindow?.label, 'National ID Priority Window', activeWindows.national.priorityWindow);
-        updateNumber('civ-window-1', formatCivilRegistrationLabel(serving.civil?.window1?.label), 'Civil Registration Window 1', activeWindows.civil.window1);
-        updateNumber('civ-window-2', formatCivilRegistrationLabel(serving.civil?.window2?.label), 'Civil Registration Window 2', activeWindows.civil.window2);
+        updateNumber('nid-w1', serving.national?.window1?.label, 'National ID Window 1', activeWindows.national.window1, 'card-nid-w1');
+        updateNumber('nid-w2', serving.national?.window2?.label, 'National ID Window 2', activeWindows.national.window2, 'card-nid-w2');
+        updateNumber('nid-prio', serving.national?.priorityWindow?.label, 'National ID Priority Window', activeWindows.national.priorityWindow, 'card-nid-prio');
+        updateNumber('civ-window-1', formatCivilRegistrationLabel(serving.civil?.window1?.label), 'Civil Registration Window 1', activeWindows.civil.window1, 'card-civ-w1');
+        updateNumber('civ-window-2', formatCivilRegistrationLabel(serving.civil?.window2?.label), 'Civil Registration Window 2', activeWindows.civil.window2, 'card-civ-w2');
 
-        const nationalQueueLimited = waiting.national.slice(0, 3);
-        const civilQueueLimited = waiting.civil.slice(0, 3);
-        renderWait('wait-nid', nationalQueueLimited, waiting.national.length);
-        renderWait('wait-civ', civilQueueLimited, waiting.civil.length);
-        const nationalRequeueLimited = waiting.national.filter(t => t.requeueTime).slice(0, 3);
-        const civilRequeueLimited = waiting.civil.filter(t => t.requeueTime).slice(0, 3);
-        const nationalRequeueTotal = waiting.national.filter(t => t.requeueTime).length;
-        const civilRequeueTotal = waiting.civil.filter(t => t.requeueTime).length;
+        const maxVisibleTickets = 6;
+        const maxVisibleTicketsWithOverflow = 5;
+
+        const nationalQueueTotal = waiting.national.length;
+        const civilQueueTotal = waiting.civil.length;
+        const nationalQueueLimited = waiting.national.slice(0, nationalQueueTotal > maxVisibleTickets ? maxVisibleTicketsWithOverflow : nationalQueueTotal);
+        const civilQueueLimited = waiting.civil.slice(0, civilQueueTotal > maxVisibleTickets ? maxVisibleTicketsWithOverflow : civilQueueTotal);
+        renderWait('wait-nid', nationalQueueLimited, nationalQueueTotal);
+        renderWait('wait-civ', civilQueueLimited, civilQueueTotal);
+
+        const nationalRequeueFull = waiting.national.filter(t => t.requeueTime);
+        const civilRequeueFull = waiting.civil.filter(t => t.requeueTime);
+        const nationalRequeueTotal = nationalRequeueFull.length;
+        const civilRequeueTotal = civilRequeueFull.length;
+        const nationalRequeueLimited = nationalRequeueFull.slice(0, nationalRequeueTotal > maxVisibleTickets ? maxVisibleTicketsWithOverflow : nationalRequeueTotal);
+        const civilRequeueLimited = civilRequeueFull.slice(0, civilRequeueTotal > maxVisibleTickets ? maxVisibleTicketsWithOverflow : civilRequeueTotal);
         renderRequeueList('requeue-nid', nationalRequeueLimited, nationalRequeueTotal);
         renderRequeueList('requeue-civ', civilRequeueLimited, civilRequeueTotal);
     }
 
     function buildLocalizedPhrase(ticketNumber, windowName, preferredLocale) {
-
         const raw = String(ticketNumber || '').trim();
         let prefixWord = null;
         let rest = raw;
@@ -746,16 +639,11 @@
             if (m[2] !== undefined) rest = m[2];
         }
 
-        // Convert the rest to a spaced phonetic sequence (digits as words, letters spelled)
         const digitMap = { '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine' };
         const restChars = rest.split('').filter(c => c !== '-' && c !== '_');
-        // If this is a Civil Registration ticket and the rest is a whole word
-        // like CONTROL or COMBINED, or the phrase "combine civil control", speak it naturally
-        // (no per-letter phonetic).
         let restPhonetic = null;
         if (prefixWord === 'Civil Registration') {
             const normalizedWords = rest.replace(/[-_]+/g, ' ').trim().toLowerCase();
-            // Speak the phrase naturally when it contains combine + civil + control
             if (normalizedWords.includes('combine') && normalizedWords.includes('civil') && normalizedWords.includes('control')) {
                 restPhonetic = normalizedWords;
             } else {
@@ -795,8 +683,6 @@
         let s = String(name);
         s = s.replace(/\bNID\b/gi, 'National ID');
         s = s.replace(/\bCR\b/gi, 'Civil Registration');
-        s = s.replace(/\bnational id\b/gi, 'National ID');
-        s = s.replace(/\bcivil registration\b/gi, 'Civil Registration');
         return s;
     }
 
@@ -816,9 +702,7 @@
     }
 
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.onvoiceschanged = () => {
-            selectTargetDeviceVoice(targetSystemLocale);
-        };
+        window.speechSynthesis.onvoiceschanged = () => { selectTargetDeviceVoice(targetSystemLocale); };
     }
 
     function announceWindowOpen(windowName) {
@@ -832,8 +716,6 @@
             const voice = selectTargetDeviceVoice(targetLocale);
             if (voice) utterance.voice = voice;
             utterance.rate = targetLocale === 'en-US' ? 0.80 : 0.95;
-            utterance.pitch = 1.0;
-            utterance.lang = targetLocale;
             window.speechSynthesis.speak(utterance);
         }
     }
@@ -849,8 +731,6 @@
             const voice = selectTargetDeviceVoice(targetLocale);
             if (voice) utterance.voice = voice;
             utterance.rate = targetLocale === 'en-US' ? 0.80 : 0.85;
-            utterance.pitch = 1.0;
-            utterance.lang = targetLocale;
             window.speechSynthesis.speak(utterance);
         }
     }
@@ -875,8 +755,9 @@
         renderQueueState(latestQueueState);
     }
 
-    function updateNumber(id, val, windowName, isActive) {
+    function updateNumber(id, val, windowName, isActive, cardId) {
         const el = document.getElementById(id);
+        const card = document.getElementById(cardId);
         const newVal = val ? val : (isActive ? '---' : 'CLOSED');
         const oldVal = el.innerText.trim();
         const wasClosed = oldVal === 'CLOSED';
@@ -888,13 +769,34 @@
         }
 
         if (oldVal !== newVal) {
-            el.classList.toggle('closed', isClosed);
+            if (card) {
+                card.classList.remove('closed');
+                if (isClosed) {
+                    card.classList.add('closing');
+                    if (card.dataset.closingTimer) {
+                        clearTimeout(Number(card.dataset.closingTimer));
+                    }
+                    const closeTimer = setTimeout(() => {
+                        card.classList.remove('closing');
+                        delete card.dataset.closingTimer;
+                    }, 2000);
+                    card.dataset.closingTimer = String(closeTimer);
+                } else {
+                    card.classList.remove('closing');
+                    if (card.dataset.closingTimer) {
+                        clearTimeout(Number(card.dataset.closingTimer));
+                        delete card.dataset.closingTimer;
+                    }
+                }
+            }
             el.innerText = newVal;
             if (isPlaceholder && wasClosed) {
                 announceWindowOpen(windowName);
             } else if (!isPlaceholder && !isClosed) {
-                el.classList.add('new-call');
-                setTimeout(() => el.classList.remove('new-call'), 5000);
+                if (card) {
+                    card.classList.add('new-call');
+                    setTimeout(() => card.classList.remove('new-call'), 4000);
+                }
                 announceTicket(newVal, windowName);
             }
         }
@@ -923,7 +825,10 @@
             `;
         }).join('');
         if (totalCount > list.length) {
-            container.innerHTML += `<div class="waiting-more">+${totalCount - list.length} more waiting</div>`;
+            container.innerHTML += `
+                <div class="waiting-more-row" role="status">
+                    +${totalCount - list.length} more waiting
+                </div>`;
         }
     }
 
@@ -944,7 +849,10 @@
             `;
         }).join('');
         if (totalCount > list.length) {
-            container.innerHTML += `<div class="waiting-more">+${totalCount - list.length} more waiting</div>`;
+            container.innerHTML += `
+                <div class="waiting-more-row" role="status">
+                    +${totalCount - list.length} more waiting
+                </div>`;
         }
     }
 

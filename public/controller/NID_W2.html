@@ -26,7 +26,7 @@
 
     <div class="content-grid">
         <div class="controller-panel">
-            <div class="window-badge">WINDOW 2</div>
+            <div class="window-badge">NATIONAL ID - WINDOW 2</div>
             <div class="serving-label">Now Serving</div>
             <div class="ticket-display" id="current-ticket">---</div>
             
@@ -44,15 +44,21 @@
                     <span>Requeue</span>
                 </button>
                 <button class="action-btn btn-secondary mb-3 w-100" id="btn-repeat-voice" style="background-color: #6c757d; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold;">
-                <i class="fas fa-volume-up mr-2"></i>
-                <span>Repeat Voice</span>
-            </button>
+                    <i class="fas fa-volume-up mr-2"></i>
+                    <span>Repeat Voice</span>
+                </button>
             </div>
         </div>
 
-        <div class="tickets-panel">
-            <div class="queue-title">NEW TICKETS</div>
-            <div class="ticket-scroll" id="queue-items"></div>
+        <div class="tickets-panel dual-queue">
+            <div class="queue-section">
+                <div class="queue-title">New Regular Tickets</div>
+                <div class="ticket-scroll" id="queue-items-regular"></div>
+            </div>
+            <div class="queue-section">
+                <div class="queue-title">New Priority Tickets</div>
+                <div class="ticket-scroll" id="queue-items-priority"></div>
+            </div>
         </div>
     </div>
 

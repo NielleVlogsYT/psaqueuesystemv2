@@ -102,6 +102,7 @@ body {
 .queue-title { font-size: 1.2rem; font-weight: 800; border-bottom: 2px solid rgba(255,255,255,0.18); padding-bottom: 10px; margin-bottom: 15px; }
 .ticket-scroll { overflow-y: auto; flex: 1; }
 .ticket-card { background: rgba(255,255,255,0.15); border-radius: 18px; padding: 20px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 12px; }
+.priority-ticket-card { background: rgba(255, 59, 48, 0.18); border: 1px solid rgba(255, 59, 48, 0.4); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
 .ticket-label { font-weight: 800; font-size: 1.3rem; }
 .ticket-meta { color: rgba(255,255,255,0.8); font-size: 0.95rem; }
 .assign-actions { display: flex; gap: 10px; flex-wrap: wrap; }

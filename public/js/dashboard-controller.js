@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const queueItemsContainer = document.getElementById('queue-items');
     const regularQueueContainer = document.getElementById('queue-items-regular');
     const priorityQueueContainer = document.getElementById('queue-items-priority');
-    const isCombinedCivil = DEPT === 'civil' && regularQueueContainer && priorityQueueContainer;
+    const isCombinedQueue = regularQueueContainer && priorityQueueContainer;
     const REQUEUE_TIMEOUT_MS = 600000; // 10 minutes
 
     // 3. Socket Event Listeners
@@ -82,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (requeueButton) {
         requeueButton.addEventListener('click', () => {
             if (!currentServingTicket || currentServingTicket.requeueCount >= 1) return;
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
             showConfirmModal('requeue', () => socket.emit('requeue_ticket', { dept: DEPT, window: WINDOW }));
         });
     }
@@ -165,7 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderWaitList(tickets) {
         allTickets = tickets; // Store all tickets for timer updates
-        if (isCombinedCivil) {
+        if (isCombinedQueue) {
             renderTicketList(regularQueueContainer, tickets.filter(ticket => !isPriorityTicket(ticket)), false);
             renderTicketList(priorityQueueContainer, tickets.filter(isPriorityTicket), true);
             return;
@@ -251,6 +252,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 : '';
             const ticketType = isPriorityTicket(ticket) ? 'Priority' : 'Regular';
             const displayType = WINDOW === 'priorityWindow' ? ticketType : (isPriorityList ? 'Priority' : 'Regular');
+            const ticketCardClass = `ticket-card${isPriorityTicket(ticket) ? ' priority-ticket-card' : ''}`;
             const actionButtons = [];
             if (!currentServingTicket && assignButton) {
                 actionButtons.push(assignButton);
@@ -261,7 +263,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             return `
-                <div class="ticket-card">
+                <div class="${ticketCardClass}">
                     <div class="ticket-label">${ticket.label}</div>
                     <div class="ticket-meta">${displayType} queue</div>
                     ${timerDisplay}
@@ -312,6 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         confirmBtn.onclick = () => {
             closeConfirmModal();
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
             onConfirm();
         };
 

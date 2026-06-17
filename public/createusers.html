@@ -10,7 +10,10 @@
     
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
+        root{
+            --glass-bg: rgba(255, 255, 255, 0.45);
+
+        }
         body { 
             
             font-family: 'Inter', sans-serif; 
@@ -18,8 +21,9 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-           background: linear-gradient(135deg, rgba(15, 32, 39, 0.85), rgba(32, 58, 67, 0.85), rgba(44, 83, 100, 0.85)), url('./res/Philippine-Statistics-Authority-PSA.png') center / cover fixed;
-            color: #000000;  
+           background: var(--glass-bg), url('./res/Philippine-Statistics-Authority-PSA.png') center / cover fixed;
+            color: #24976f;  
+            
             animation: fadeIn 0.6s ease-in-out forwards; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(1, 61, 129, 0.25), rgba(7, 112, 233, 0.25)), url('./res/Philippine-Statistics-Authority-PSA.png') center / cover fixed; color: #1f2a3a; }
         
         @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
@@ -40,22 +44,23 @@
         }
 
         .header h1 {
-            color: #ffffff;
-            font-size: 2rem;
+            color: rgb(0, 74, 234);
+            font-size: 3rem;
             font-weight: 800;
             margin-bottom: 5px;
         }
 
         .header p {
-            color: rgba(255, 255, 255, 0.93);
+            color: rgba(244, 240, 0, 0.93);
+            margin-top: -7px;
             font-size: 0.95rem;
         }
 
         /* --- GLASSMORPHISM CARD --- */
         .glass-card { 
             background: rgba(108, 108, 108, 0.826);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(100px);
+            -webkit-backdrop-filter: blur(50px);
             padding: 40px; 
             border-radius: 20px; 
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -96,12 +101,12 @@
         .btn-back {
             display: inline-block;
             margin-top: 20px;
-            color: rgba(19, 19, 19, 0.7);
+            color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 1rem;
             transition: color 0.3s;
         }
-        .btn-back:hover { color: #fff; }
+        .btn-back:hover { color: #ff5353; }
         .btn-back i { margin-right: 5px; }
 
         .status-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 15px; font-weight: 700; text-align: center;}

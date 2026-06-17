@@ -1338,7 +1338,7 @@
                         const formattedTime = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
                         const dynamicTimestamp = `as of ${formattedDate} ${formattedTime}`;
 
-                        const dailyRes = await fetch('/api/daily-transactions');
+                        const dailyRes = await fetch('/api/daily-transactions?liveOnly=true');
                         const dailyData = await dailyRes.json();
 
 
@@ -1360,7 +1360,7 @@
 
                         if (typeof window._clearStaleState === 'function') window._clearStaleState();
 
-                        const nationalIdCategoriesRes = await fetch(`/api/national-id-ticket-categories?date=${todayKey}`);
+                        const nationalIdCategoriesRes = await fetch(`/api/national-id-ticket-categories?date=${todayKey}&liveOnly=true`);
                         const nationalIdCategoriesData = await nationalIdCategoriesRes.json();
                             if (nationalIdCategoriesData.success && orderChart) {
                             orderChart.data.datasets[0].data = [nationalIdCategoriesData.regular, nationalIdCategoriesData.priority];
@@ -1368,7 +1368,7 @@
                             document.querySelectorAll('.nid-category-timestamp').forEach(el => el.textContent = dynamicTimestamp);
                         }
 
-                        const nationalIdStatusRes = await fetch(`/api/national-id-ticket-status-summary?date=${todayKey}`);
+                        const nationalIdStatusRes = await fetch(`/api/national-id-ticket-status-summary?date=${todayKey}&liveOnly=true`);
                         const nationalIdStatusData = await nationalIdStatusRes.json();
                         if (nationalIdStatusData.success && myStatusChart) {
                             myStatusChart.data.datasets[0].data = [
@@ -1380,7 +1380,7 @@
                             document.querySelectorAll('.nid-status-timestamp').forEach(el => el.textContent = dynamicTimestamp);
                         }
 
-                        const civilIdCategoriesRes = await fetch(`/api/civil-registration-ticket-categories?date=${todayKey}`);
+                        const civilIdCategoriesRes = await fetch(`/api/civil-registration-ticket-categories?date=${todayKey}&liveOnly=true`);
                         const civilIdCategoriesData = await civilIdCategoriesRes.json();
                         if (civilIdCategoriesData.success && civilOrderChart) {
                             civilOrderChart.data.datasets[0].data = [civilIdCategoriesData.regular, civilIdCategoriesData.priority];
@@ -1388,7 +1388,7 @@
                             document.querySelectorAll('.civil-category-timestamp').forEach(el => el.textContent = dynamicTimestamp);
                         }
 
-                        const civilStatusRes = await fetch(`/api/civil-registration-ticket-status-summary?date=${todayKey}`);
+                        const civilStatusRes = await fetch(`/api/civil-registration-ticket-status-summary?date=${todayKey}&liveOnly=true`);
                         const civilStatusData = await civilStatusRes.json();
                         if (civilStatusData.success && civilEarningsChart) {
                             civilEarningsChart.data.datasets[0].data = [civilStatusData.completed || 0, civilStatusData.terminated || 0, civilStatusData.requeued || 0];
@@ -1396,7 +1396,7 @@
                             document.querySelectorAll('.civil-status-timestamp').forEach(el => el.textContent = dynamicTimestamp);
                         }
 
-                        const logsRes = await fetch('/api/system-logs/ticket_logs');
+                        const logsRes = await fetch('/api/system-logs/ticket_logs?liveOnly=true');
                     const logsData = await logsRes.json();
                     const allLogs = logsData.success && Array.isArray(logsData.logs) ? logsData.logs : [];
                     
@@ -1578,7 +1578,7 @@
 
                 const refreshFilteredAnalysis = async () => {
                     try {
-                        const logsRes = await fetch('/api/system-logs/ticket_logs');
+                        const logsRes = await fetch('/api/system-logs/ticket_logs?liveOnly=true');
                         const logsData = await logsRes.json();
                         if (logsData.success && Array.isArray(logsData.logs)) {
                             const seen = new Set();
@@ -1775,7 +1775,7 @@
 
             async function downloadAnalyticsSnapshotCSV() {
                 try {
-                    const logsRes = await fetch('/api/system-logs/ticket_logs');
+                    const logsRes = await fetch('/api/system-logs/ticket_logs?liveOnly=true');
                     const logsData = await logsRes.json();
                     if (!logsData.success || !Array.isArray(logsData.logs) || logsData.logs.length === 0) {
                         return alert('No analytical transactions found within query constraints to download.');

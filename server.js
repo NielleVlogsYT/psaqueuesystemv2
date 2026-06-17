@@ -451,7 +451,9 @@ app.get('/api/system-logs/:folder', async (req, res) => {
                 const bTime = new Date(b.iso_timestamp || b.archivedAt || 0).getTime();
                 return bTime - aTime;
             });
-            return res.json({ success: true, logs: combinedLogs, collection: 'combined' });
+            // Deduplicate logs for accuracy
+            const deduplicatedLogs = deduplicateLogs(combinedLogs);
+            return res.json({ success: true, logs: deduplicatedLogs, collection: 'combined' });
         }
         
         const logs = await db.collection(collectionName).find(filter).sort({ iso_timestamp: -1 }).toArray();
@@ -570,11 +572,32 @@ app.get('/api/daily-transactions', async (req, res) => {
         const requestedDate = req.query.date || getTodayString();
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const filter = { action: 'ISSUED', ...(dateFilter || {}) };
+        
+        // Check if liveOnly parameter is set (default to including both collections)
+        const liveOnly = req.query.liveOnly === 'true';
 
-        const logs = await db.collection('ticket_logs').find(filter).toArray();      
+        if (liveOnly) {
+            // Only retrieve from ticket_logs (live data)
+            const logs = await db.collection('ticket_logs').find(filter).toArray();      
+            let total = 0, national = 0, civil = 0;
+            logs.forEach(log => {
+                total++;
+                if (log.department === 'national') national++;
+                else if (log.department === 'civil') civil++;
+            });
+            return res.json({ success: true, total, national, civil });
+        }
+
+        // Original behavior: combine both collections
+        const [ticketLogs, masterHistory] = await Promise.all([
+            db.collection('ticket_logs').find(filter).toArray(),
+            db.collection('master_history').find(filter).toArray()
+        ]);
+
+        const allLogs = deduplicateLogs([...ticketLogs, ...masterHistory]);
           
         let total = 0, national = 0, civil = 0;
-        logs.forEach(log => {
+        allLogs.forEach(log => {
             total++;
             if (log.department === 'national') national++;
             else if (log.department === 'civil') civil++;
@@ -590,7 +613,22 @@ app.get('/api/national-id-ticket-categories', async (req, res) => {
         const requestedDate = req.query.date || getTodayString();
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const query = { department: 'national', action: 'ISSUED', ...(dateFilter || {}) };
+        
+        // Check if liveOnly parameter is set (default to including both collections)
+        const liveOnly = req.query.liveOnly === 'true';
 
+        if (liveOnly) {
+            // Only retrieve from ticket_logs (live data)
+            const tickets = await db.collection('ticket_logs').find(query).toArray();
+            let regularCount = 0, priorityCount = 0;
+            tickets.forEach(ticket => {
+                if (ticket.isPriority === true || ticket.isPriority === 'true') priorityCount++;
+                else regularCount++;
+            });
+            return res.json({ success: true, regular: regularCount, priority: priorityCount });
+        }
+
+        // Original behavior: combine both collections
         const [liveTickets, historyTickets] = await Promise.all([
             db.collection('ticket_logs').find(query).toArray(),
             db.collection('master_history').find(query).toArray()
@@ -614,7 +652,22 @@ app.get('/api/civil-registration-ticket-categories', async (req, res) => {
         const requestedDate = req.query.date || getTodayString();
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const query = { department: 'civil', action: 'ISSUED', ...(dateFilter || {}) };
+        
+        // Check if liveOnly parameter is set (default to including both collections)
+        const liveOnly = req.query.liveOnly === 'true';
 
+        if (liveOnly) {
+            // Only retrieve from ticket_logs (live data)
+            const tickets = await db.collection('ticket_logs').find(query).toArray();
+            let regular = 0, priority = 0;
+            tickets.forEach(t => { 
+                if (t.isPriority === true || t.isPriority === 'true') priority++; 
+                else regular++; 
+            });
+            return res.json({ success: true, regular, priority });
+        }
+
+        // Original behavior: combine both collections
         const [liveTickets, historyTickets] = await Promise.all([
             db.collection('ticket_logs').find(query).toArray(),
             db.collection('master_history').find(query).toArray()
@@ -638,6 +691,23 @@ app.get('/api/civil-registration-ticket-status-summary', async (req, res) => {
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const match = { department: 'civil', action: { $in: ['COMPLETED', 'TERMINATED', 'REQUEUED'] }, ...(dateFilter || {}) };
         
+        // Check if liveOnly parameter is set (default to including both collections)
+        const liveOnly = req.query.liveOnly === 'true';
+
+        if (liveOnly) {
+            // Only retrieve from ticket_logs (live data)
+            const docs = await db.collection('ticket_logs').find(match).toArray();
+            const summaryMap = { COMPLETED: 0, TERMINATED: 0, REQUEUED: 0 };
+            docs.forEach(doc => { if (summaryMap[doc.action] !== undefined) summaryMap[doc.action]++; });
+            return res.json({
+                success: true,
+                completed: summaryMap['COMPLETED'],
+                terminated: summaryMap['TERMINATED'],
+                requeued: summaryMap['REQUEUED']
+            });
+        }
+
+        // Original behavior: combine both collections
         const [liveDocs, historyDocs] = await Promise.all([
             db.collection('ticket_logs').find(match).toArray(),
             db.collection('master_history').find(match).toArray()
@@ -663,6 +733,23 @@ app.get('/api/national-id-ticket-status-summary', async (req, res) => {
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const match = { department: 'national', action: { $in: ['COMPLETED', 'TERMINATED', 'REQUEUED'] }, ...(dateFilter || {}) };
         
+        // Check if liveOnly parameter is set (default to including both collections)
+        const liveOnly = req.query.liveOnly === 'true';
+
+        if (liveOnly) {
+            // Only retrieve from ticket_logs (live data)
+            const docs = await db.collection('ticket_logs').find(match).toArray();
+            const summaryMap = { COMPLETED: 0, TERMINATED: 0, REQUEUED: 0 };
+            docs.forEach(doc => { if (summaryMap[doc.action] !== undefined) summaryMap[doc.action]++; });
+            return res.json({ 
+                success: true, 
+                completed: summaryMap['COMPLETED'], 
+                terminated: summaryMap['TERMINATED'], 
+                requeued: summaryMap['REQUEUED'] 
+            });
+        }
+
+        // Original behavior: combine both collections
         const [liveDocs, historyDocs] = await Promise.all([
             db.collection('ticket_logs').find(match).toArray(),
             db.collection('master_history').find(match).toArray()
@@ -716,6 +803,60 @@ app.get('/api/ticket-logs-range', async (req, res) => {
 
         const logs = deduplicateLogs([...live, ...history]);
         res.json({ success: true, logs, count: logs.length });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// New endpoint for yearly aggregated ticket statistics (combines both collections, resets yearly)
+app.get('/api/yearly-ticket-aggregate', async (req, res) => {
+    try {
+        if (!db) return res.status(500).json({ success: false, error: "Database offline" });
+
+        const currentYear = new Date().getFullYear();
+        const yearStart = new Date(currentYear, 0, 1);
+        const yearEnd = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+
+        const filter = {
+            action: 'ISSUED',
+            iso_timestamp: { $gte: yearStart, $lte: yearEnd }
+        };
+
+        const [live, history] = await Promise.all([
+            db.collection('ticket_logs').find(filter).toArray(),
+            db.collection('master_history').find(filter).toArray()
+        ]);
+
+        const logs = deduplicateLogs([...live, ...history]);
+
+        // Aggregate by month and department
+        const monthlyData = {};
+        for (let month = 1; month <= 12; month++) {
+            monthlyData[month] = { national: 0, civil: 0 };
+        }
+
+        logs.forEach(log => {
+            const logDate = new Date(log.iso_timestamp || log.archivedAt || new Date());
+            const month = logDate.getMonth() + 1;
+            
+            if (log.department === 'national') {
+                monthlyData[month].national++;
+            } else if (log.department === 'civil') {
+                monthlyData[month].civil++;
+            }
+        });
+
+        // Format response
+        const monthlyNational = Array.from({ length: 12 }, (_, i) => monthlyData[i + 1].national);
+        const monthlyCivil = Array.from({ length: 12 }, (_, i) => monthlyData[i + 1].civil);
+
+        res.json({ 
+            success: true, 
+            year: currentYear,
+            monthlyNational, 
+            monthlyCivil, 
+            totalLogs: logs.length 
+        });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

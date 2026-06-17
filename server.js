@@ -42,8 +42,7 @@ const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true, // Use SSL/TLS
-    // FORCE NODE TO USE IPv4 ONLY TO PREVENT ENETUNREACH ON CLOUD PROVIDERS
-    connectionTimeout: 10000, 
+    connectionTimeout: 10000, // 10 seconds timeout limit
     greetingTimeout: 10000,
     socketTimeout: 10000,
     dnsTimeout: 10000,
@@ -51,10 +50,12 @@ const transporter = nodemailer.createTransport({
         user: 'jhondenielle.psa@gmail.com',
         pass: process.env.GMAIL_APP_PASS 
     },
-    // This forces Node to resolve smtp.gmail.com using standard IPv4 addresses (family: 4)
-    getSocket: (options, callback) => {
-        options.family = 4;
-        return require('net').connect(options, callback);
+    // Safe, built-in Node properties to handle dual-stack network setups:
+    // This tells Node's DNS lookup engine to prioritize IPv4 over IPv6 natively
+    lookup: (hostname, options, callback) => {
+        require('dns').lookup(hostname, { family: 4 }, (err, address, family) => {
+            callback(err, address, family);
+        });
     }
 });
 

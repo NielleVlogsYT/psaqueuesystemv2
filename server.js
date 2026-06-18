@@ -4,7 +4,6 @@ const http = require('http');
 const os = require('os');
 const { Server } = require('socket.io');
 const { MongoClient, ObjectId } = require('mongodb');
-const nodemailer = require('nodemailer'); 
 
 // --- FIREBASE ADMIN SDK SETUP ---
 const admin = require('firebase-admin');
@@ -36,28 +35,6 @@ admin.initializeApp({
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-
-// --- EMAIL TRANSPORTER SETUP ---
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Use SSL/TLS
-    connectionTimeout: 10000, // 10 seconds timeout limit
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-    dnsTimeout: 10000,
-    auth: {
-        user: 'jhondenielle.psa@gmail.com',
-        pass: process.env.GMAIL_APP_PASS 
-    },
-    // Safe, built-in Node properties to handle dual-stack network setups:
-    // This tells Node's DNS lookup engine to prioritize IPv4 over IPv6 natively
-    lookup: (hostname, options, callback) => {
-        require('dns').lookup(hostname, { family: 4 }, (err, address, family) => {
-            callback(err, address, family);
-        });
-    }
-});
 
 const windowLocks = {};
 
@@ -291,38 +268,53 @@ function getWindowName(windowKey) {
 
 // --- 5. API ROUTES ---
 
-// Send Welcome Email Route
+// Send Welcome Email Route (Using Google Apps Script Bridge)
 app.post('/api/send-welcome-email', async (req, res) => {
     const { email, tempPassword, firstName } = req.body;
 
-    const mailOptions = {
-        from: '"PSA Queue System" <jhondenielle.psa@gmail.com>', 
-        to: email,
-        subject: 'Welcome to the PSA Queue System - Your Account Details',
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                <h2 style="color: #2c5364; text-align: center;">Welcome to the PSA Queue System!</h2>
-                <p>Hello ${firstName || 'Staff'},</p>
-                <p>An administrator has created an account for you. Below are your temporary login credentials:</p>
-                <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
-                    <p style="margin: 0; color: #333;"><strong>Email:</strong> ${email}</p>
-                    <p style="margin: 10px 0 0 0; color: #333;"><strong>Temporary Password:</strong> <span style="font-family: monospace; font-size: 1.2em; color: #d9534f;">${tempPassword}</span></p>
-                </div>
-                <p style="color: #666; font-size: 0.9em;"><em>For security reasons, please log in and change your password immediately.</em></p>
-                <br>
-                <p style="color: #333;">Best Regards,<br><strong>System Administrator</strong></p>
+    const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+            <h2 style="color: #2c5364; text-align: center;">Welcome to the PSA Queue System!</h2>
+            <p>Hello ${firstName || 'Staff'},</p>
+            <p>An administrator has created an account for you. Below are your temporary login credentials:</p>
+            <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
+                <p style="margin: 0; color: #333;"><strong>Email:</strong> ${email}</p>
+                <p style="margin: 10px 0 0 0; color: #333;"><strong>Temporary Password:</strong> <span style="font-family: monospace; font-size: 1.2em; color: #d9534f;">${tempPassword}</span></p>
             </div>
-        `
-    };
+            <p style="color: #666; font-size: 0.9em;"><em>For security reasons, please log in and change your password immediately.</em></p>
+            <br>
+            <p style="color: #333;">Best Regards,<br><strong>System Administrator</strong></p>
+        </div>
+    `;
 
     try {
-        await transporter.sendMail(mailOptions);
-        res.json({ success: true });
+        // PASTE YOUR GOOGLE SCRIPT WEB APP URL HERE:
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbxOw-KnFFUJYwbFG6SrHgZTyyky7YQXBQHbwKEz3LNiefO875N1VPno6b1SOmsSkNivEg/exec'; 
+
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                to: email,
+                subject: 'Welcome to the PSA Queue System - Your Account Details',
+                html: htmlContent
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+            res.json({ success: true });
+        } else {
+            console.error("Google Script Error:", result.error);
+            res.status(500).json({ success: false, error: 'Failed to trigger email via Google' });
+        }
     } catch (error) {
-        console.error("Email sending failed:", error);
-        res.status(500).json({ success: false, error: 'Failed to send email' });
+        console.error("Bridge connection failed:", error);
+        res.status(500).json({ success: false, error: 'Network error reaching email bridge' });
     }
 });
+
 
 // PRE-FLIGHT CHECK: Duplicate validation
 app.post('/api/check-user-exists', async (req, res) => {

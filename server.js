@@ -163,6 +163,9 @@ async function logEvent(collectionName, data) {
             ...data
         };
         await db.collection(collectionName).insertOne(entry);
+        if (collectionName === 'ticket_logs') {
+            io.emit('ticket_logs_updated');
+        }
     } catch (err) { console.error("Logging failed:", err); }
 }
 
@@ -289,7 +292,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
 
     try {
         // PASTE YOUR GOOGLE SCRIPT WEB APP URL HERE:
-        const scriptUrl = 'https://script.google.com/macros/s/AKfycbxOw-KnFFUJYwbFG6SrHgZTyyky7YQXBQHbwKEz3LNiefO875N1VPno6b1SOmsSkNivEg/exec'; 
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycbxfVjlbaPs6vZPItf_cXPzPcDVFhMDhLbZym3kvV4hb2eOOywa6o7ZLGNGPgLZZ64ztHw/exec'; 
 
         const response = await fetch(scriptUrl, {
             method: 'POST',
@@ -976,7 +979,19 @@ io.on('connection', (socket) => {
     
     socket.on('reset_Dailyqueues', async () => {
         try {
-            await performDailyReset();
+            // Delete all ticket logs for the current day then reset in-memory counters
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const tomorrowStart = new Date(todayStart);
+            tomorrowStart.setDate(todayStart.getDate() + 1);
+
+            const delFilter = { iso_timestamp: { $gte: todayStart, $lt: tomorrowStart } };
+            if (db) {
+                const res = await db.collection('ticket_logs').deleteMany(delFilter);
+                console.log(`🗑️ Deleted ${res.deletedCount} ticket_logs entries for today.`);
+            }
+
+            await resetTodayQueueCounters();
             socket.emit('reset_Dailyqueues_success');
             io.emit('ticket_logs_updated');
             syncState();
@@ -1035,6 +1050,7 @@ io.on('connection', (socket) => {
 
             socket.emit('ticket_assigned', { label: ticket.label, dept: ticket.department, isPriority: ticket.isPriority, customerType: ticket.customerType });
             if (process.env.DEBUG_TICKETS === '1') console.log(`ISSUED ${ticket.label} -> ${dept} priority=${ticket.isPriority}`);
+            await io.emit('ticket_logs_updated');
             syncState();
         } catch (err) {
             socket.emit('ticket_error', { error: 'Server error creating ticket' });
@@ -1054,6 +1070,7 @@ io.on('connection', (socket) => {
             
             await logEvent('ticket_logs', { ...ticket, action: 'ASSIGNED', window });
             await saveCurrentState();
+            await io.emit('ticket_logs_updated');
             syncState();
         }
     });

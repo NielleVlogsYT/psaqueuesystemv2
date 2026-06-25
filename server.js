@@ -10,7 +10,6 @@ const admin = require('firebase-admin');
 
 let serviceAccount;
 
-// Check for environment variable first (Production/Render environment)
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   try {
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -19,13 +18,12 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     process.exit(1);
   }
 } else {
-  // Fallback to local file (Local development environment)
-  try {
-    serviceAccount = require('./serviceAccountKey.json');
-  } catch (err) {
-    console.error("❌ Firebase credentials missing! Provide FIREBASE_SERVICE_ACCOUNT env var or serviceAccountKey.json");
-    process.exit(1);
-  }
+    try {
+        serviceAccount = require('./serviceAccountKey.json');
+    } catch (err) {
+        console.error("❌ Firebase credentials missing! Provide FIREBASE_SERVICE_ACCOUNT env var or serviceAccountKey.json");
+        process.exit(1);
+    }
 }
 
 admin.initializeApp({
@@ -271,7 +269,6 @@ function getWindowName(windowKey) {
 
 // --- 5. API ROUTES ---
 
-// Send Welcome Email Route (Using Google Apps Script Bridge)
 app.post('/api/send-welcome-email', async (req, res) => {
     const { email, tempPassword, firstName } = req.body;
 
@@ -372,7 +369,6 @@ app.post('/api/get-role', async (req, res) => {
                 );
             }
         } else if (user) {
-            // Only grant role if user exists
             finalRole = user.role;
         }
 
@@ -442,23 +438,17 @@ app.delete('/api/delete-user/:email', async (req, res) => {
         if (!db) return res.status(500).json({ success: false, error: "Database offline" });
         const emailToDelete = req.params.email;
         
-        // 1. Delete the user from Firebase Authentication First
         try {
-            // Get the user by email to retrieve their Firebase UID
             const userRecord = await admin.auth().getUserByEmail(emailToDelete);
-            // Delete the user using their UID
             await admin.auth().deleteUser(userRecord.uid);
             console.log(`[SERVER] Successfully deleted user from Firebase Auth: ${emailToDelete}`);
         } catch (firebaseErr) {
             console.error(`[SERVER] Error deleting user from Firebase Auth:`, firebaseErr.message);
-            // If the user doesn't exist in Firebase (e.g., deleted manually earlier), 
-            // we catch the error but allow the script to continue deleting them from MongoDB.
+
         }
 
-        // 2. Delete the user from your MongoDB database
         await db.collection('employee_accounts').deleteOne({ email: emailToDelete });
         
-        // 3. Immediately kick the deleted user out if they are currently online
         io.emit('force_logout_signal', emailToDelete);
 
         res.json({ success: true });
@@ -500,7 +490,6 @@ app.get('/api/system-logs/:folder', async (req, res) => {
                 const bTime = new Date(b.iso_timestamp || b.archivedAt || 0).getTime();
                 return bTime - aTime;
             });
-            // Deduplicate logs for accuracy
             const deduplicatedLogs = deduplicateLogs(combinedLogs);
             return res.json({ success: true, logs: deduplicatedLogs, collection: 'combined' });
         }
@@ -632,7 +621,6 @@ app.get('/api/daily-transactions', async (req, res) => {
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const filter = { action: 'ISSUED', ...(dateFilter || {}) };
         
-        // Check if liveOnly parameter is set (default to including both collections)
         const liveOnly = req.query.liveOnly === 'true';
 
         if (liveOnly) {
@@ -647,7 +635,6 @@ app.get('/api/daily-transactions', async (req, res) => {
             return res.json({ success: true, total, national, civil });
         }
 
-        // Original behavior: combine both collections
         const [ticketLogs, masterHistory] = await Promise.all([
             db.collection('ticket_logs').find(filter).toArray(),
             db.collection('master_history').find(filter).toArray()
@@ -673,11 +660,9 @@ app.get('/api/national-id-ticket-categories', async (req, res) => {
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const query = { department: 'national', action: 'ISSUED', ...(dateFilter || {}) };
         
-        // Check if liveOnly parameter is set (default to including both collections)
         const liveOnly = req.query.liveOnly === 'true';
 
         if (liveOnly) {
-            // Only retrieve from ticket_logs (live data)
             const tickets = await db.collection('ticket_logs').find(query).toArray();
             let regularCount = 0, priorityCount = 0;
             tickets.forEach(ticket => {
@@ -687,7 +672,6 @@ app.get('/api/national-id-ticket-categories', async (req, res) => {
             return res.json({ success: true, regular: regularCount, priority: priorityCount });
         }
 
-        // Original behavior: combine both collections
         const [liveTickets, historyTickets] = await Promise.all([
             db.collection('ticket_logs').find(query).toArray(),
             db.collection('master_history').find(query).toArray()
@@ -712,11 +696,9 @@ app.get('/api/civil-registration-ticket-categories', async (req, res) => {
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const query = { department: 'civil', action: 'ISSUED', ...(dateFilter || {}) };
         
-        // Check if liveOnly parameter is set (default to including both collections)
         const liveOnly = req.query.liveOnly === 'true';
 
         if (liveOnly) {
-            // Only retrieve from ticket_logs (live data)
             const tickets = await db.collection('ticket_logs').find(query).toArray();
             let regular = 0, priority = 0;
             tickets.forEach(t => { 
@@ -726,7 +708,6 @@ app.get('/api/civil-registration-ticket-categories', async (req, res) => {
             return res.json({ success: true, regular, priority });
         }
 
-        // Original behavior: combine both collections
         const [liveTickets, historyTickets] = await Promise.all([
             db.collection('ticket_logs').find(query).toArray(),
             db.collection('master_history').find(query).toArray()
@@ -750,7 +731,6 @@ app.get('/api/civil-registration-ticket-status-summary', async (req, res) => {
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const match = { department: 'civil', action: { $in: ['COMPLETED', 'TERMINATED', 'REQUEUED'] }, ...(dateFilter || {}) };
         
-        // Check if liveOnly parameter is set (default to including both collections)
         const liveOnly = req.query.liveOnly === 'true';
 
         if (liveOnly) {
@@ -792,11 +772,9 @@ app.get('/api/national-id-ticket-status-summary', async (req, res) => {
         const dateFilter = buildDateFilter(requestedDate) || buildDateFilter(getTodayString());
         const match = { department: 'national', action: { $in: ['COMPLETED', 'TERMINATED', 'REQUEUED'] }, ...(dateFilter || {}) };
         
-        // Check if liveOnly parameter is set (default to including both collections)
         const liveOnly = req.query.liveOnly === 'true';
 
         if (liveOnly) {
-            // Only retrieve from ticket_logs (live data)
             const docs = await db.collection('ticket_logs').find(match).toArray();
             const summaryMap = { COMPLETED: 0, TERMINATED: 0, REQUEUED: 0 };
             docs.forEach(doc => { if (summaryMap[doc.action] !== undefined) summaryMap[doc.action]++; });
@@ -979,7 +957,6 @@ io.on('connection', (socket) => {
     
     socket.on('reset_Dailyqueues', async () => {
         try {
-            // Delete all ticket logs for the current day then reset in-memory counters
             const todayStart = new Date();
             todayStart.setHours(0, 0, 0, 0);
             const tomorrowStart = new Date(todayStart);

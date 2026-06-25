@@ -58,12 +58,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const windowBadge = document.querySelector('.window-badge');
-            const windowName = windowBadge ? windowBadge.innerText.trim() : 'Designated Window';
+            const windowName = formatControllerWindowName(WINDOW || '');
 
             if ('speechSynthesis' in window) {
-                const spokenTicket = ticketNumber.split('').map(char => char === '-' ? 'dash' : char).join(' ');
-                const message = `Now calling ticket number ${spokenTicket}, please proceed to ${windowName}.`;
+                const message = DEPT === 'civil'
+                    ? buildCivilRegistrationRepeatPhrase(ticketNumber, windowName)
+                    : buildStandardRepeatPhrase(ticketNumber, windowName);
 
                 const utterance = new SpeechSynthesisUtterance(message);
                 utterance.rate = 0.95;
@@ -222,6 +222,36 @@ document.addEventListener("DOMContentLoaded", () => {
             return ticket.label.includes('-P-');
         }
         return false;
+    }
+
+    function buildStandardRepeatPhrase(ticketNumber, windowName) {
+        const spokenTicket = String(ticketNumber || '').split('').map(char => char === '-' ? 'dash' : char).join(' ');
+        return `Now calling ticket number ${spokenTicket}, please proceed to ${windowName}.`;
+    }
+
+    function buildCivilRegistrationRepeatPhrase(ticketNumber, windowName) {
+        const raw = String(ticketNumber || '').trim();
+        const normalized = raw.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+        const match = normalized.match(/^CR\s*(R(?:EG(?:ULAR)?)?|P(?:R(?:IORITY)?)?)\s*(\d+)$/i);
+        if (match) {
+            const typeSegment = match[1] || '';
+            const type = /^(P(?:R(?:IORITY)?)?)$/i.test(typeSegment) ? 'Priority' : 'Regular';
+            const ticketDigits = match[2] || '';
+            const spokenDigits = ticketDigits.split('').join(' ');
+            return `Civil Registration ${type} ${spokenDigits} please proceed to ${windowName}.`;
+        }
+        // Fallback to a safer spoken label if parsing fails
+        const fallback = normalized.replace(/\d+/g, d => d.split('').join(' '));
+        return `Civil Registration ${fallback || 'ticket'} please proceed to ${windowName}.`;
+    }
+
+    function formatControllerWindowName(rawWindow) {
+        if (!rawWindow) return 'Designated Window';
+        const name = String(rawWindow).trim().toLowerCase();
+        if (name.includes('window1')) return 'Window 1';
+        if (name.includes('window2')) return 'Window 2';
+        if (name.includes('priority')) return 'Priority Window';
+        return rawWindow;
     }
 
     function renderTicketList(container, tickets, isPriorityList) {

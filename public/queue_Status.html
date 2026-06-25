@@ -147,6 +147,15 @@
             box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
         }
 
+        .strip-divider {
+            width: 100%;
+            height: 3px;
+            border-radius: 1px;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+            padding: 20px 0;
+        }
+
+
         .serving-main {
             flex: 3;
             display: flex;
@@ -229,7 +238,7 @@
         }
 
         /* Neon Indicators per Status Rule */
-        .window-card.closing { opacity: 0.4; }
+        .window-card.closing { opacity: 1.0; }
         .window-card.closing .ticket-number { color: var(--text-muted); text-shadow: none; }
         .window-card.closing .win-title { color: #0f172a; }
 
@@ -541,7 +550,7 @@
     <div class="ticker-strip">
         <div class="ticker-strip">
             <div class="ticker-wrap">
-                <div class="ticker-item"><i class="fas fa-info-circle"></i> Welcome to Philippine Statistics Authority - Provincial Statistical Office - Bulacan </div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Welcome to Philippine Statistics Authority Provincial Statistical Office - Bulacan </div>
                 <div class="ticker-item"><i class="fas fa-info-circle"></i> Website : https://rsso03.psa.gov.ph/bulacan </div>
                 <div class="ticker-item"><i class="fas fa-info-circle"></i> Appointment Website : https://appointment.psa.gov.ph/</div>
                 <div class="ticker-item"><i class="fas fa-info-circle"></i> Telephone Number : (044)662-3024</div>
@@ -549,6 +558,9 @@
             </div>
         </div>
     </div>
+
+    <div class="strip-divider"></div>
+
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -637,6 +649,30 @@
         renderRequeueList('requeue-civ', civilRequeueLimited, civilRequeueTotal);
     }
 
+    function buildCivilRegistrationTicketText(raw) {
+        if (!raw) return '';
+        const text = String(raw).trim();
+        const exactMatch = text.match(/^CR[-_ ]*(R(?:EG(?:ULAR)?)?|P(?:R(?:IORITY)?)?)[-_ ]*([0-9]+)$/i);
+        if (exactMatch) {
+            const typeToken = exactMatch[1].toUpperCase();
+            const type = /^(P|PR|PRIORITY)/i.test(typeToken) ? 'Priority' : 'Regular';
+            // Preserve leading zeros (do not coerce to Number)
+            const number = exactMatch[2] || '';
+            return `Civil Registration ${type} ${number}`;
+        }
+
+        const content = text.replace(/^CR[-_ ]*/i, '').replace(/[-_]+/g, ' ').trim();
+        const typeOnly = content.match(/^(R|REG|REGULAR)$/i);
+        const priorityOnly = content.match(/^(P|PR|PRIORITY)$/i);
+        if (typeOnly) return 'Civil Registration Regular';
+        if (priorityOnly) return 'Civil Registration Priority';
+
+        if (content) {
+            return `Civil Registration ${content}`;
+        }
+        return 'Civil Registration';
+    }
+
     function buildLocalizedPhrase(ticketNumber, windowName, preferredLocale) {
         const raw = String(ticketNumber || '').trim();
         let prefixWord = null;
@@ -656,17 +692,9 @@
         const restChars = rest.split('').filter(c => c !== '-' && c !== '_');
         let restPhonetic = null;
         if (prefixWord === 'Civil Registration') {
-            const normalizedWords = rest.replace(/[-_]+/g, ' ').trim().toLowerCase();
-            if (normalizedWords.includes('combine') && normalizedWords.includes('civil') && normalizedWords.includes('control')) {
-                restPhonetic = normalizedWords;
-            } else {
-                const cleanedWhole = rest.replace(/[-_ ]/g, '').toUpperCase();
-                const wholeWordMap = { 'CONTROL': 'control', 'CTRL': 'control', 'COMBINED': 'combined', 'COMBINE': 'combined' };
-                if (/^[A-Z]+$/.test(cleanedWhole) && cleanedWhole.length > 1) {
-                    if (wholeWordMap[cleanedWhole]) restPhonetic = wholeWordMap[cleanedWhole];
-                    else restPhonetic = cleanedWhole.toLowerCase();
-                }
-            }
+            const civilText = buildCivilRegistrationTicketText(raw).replace(/^Civil Registration\s*/i, '');
+            // space numeric digits so TTS reads them like National ID ("one two three" or "1 2 3")
+            restPhonetic = civilText.replace(/\d+/g, (m) => m.split('').join(' '));
         }
 
         if (!restPhonetic) {
@@ -701,7 +729,25 @@
 
     function formatCivilRegistrationLabel(label) {
         if (!label) return label;
-        return String(label).replace(/^CR(?=[-_])/i, 'CIVILREG');
+        const raw = String(label).trim();
+        const normalized = raw.replace(/\s+/g, ' ').replace(/[-_]+/g, '-').trim();
+
+        const directMatch = normalized.match(/^(?:CR-)?(R(?:EG(?:ULAR)?)?|P(?:R(?:IORITY)?)?)-?(\d+)$/i);
+        if (directMatch) {
+            const typeSegment = directMatch[1] || '';
+            const ticketNumber = directMatch[2] || '';
+            const type = /^P/i.test(typeSegment) ? 'P' : 'R';
+            return `CIVILREG-${type}-${ticketNumber}`;
+        }
+
+        const expandedMatch = normalized.match(/^(?:Civil Registration\s*)?(Regular|Priority)-?(\d+)$/i);
+        if (expandedMatch) {
+            const type = /^Priority/i.test(expandedMatch[1]) ? 'P' : 'R';
+            const ticketNumber = expandedMatch[2] || '';
+            return `CIVILREG-${type}-${ticketNumber}`;
+        }
+
+        return raw;
     }
 
     function selectTargetDeviceVoice(localeCode) {

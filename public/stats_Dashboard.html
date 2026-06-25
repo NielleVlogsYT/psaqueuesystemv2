@@ -711,7 +711,6 @@
                 }
 
                 // --- 3. CHART METRICS INSTANTIATIONS ---
-                // Exposed on window so it can be called from outside DOMContentLoaded (e.g. socket listeners)
                 window.getMonthLabels = () => [
                     'January', 'February', 'March', 'April', 'May', 'June',
                     'July', 'August', 'September', 'October', 'November', 'December'
@@ -762,7 +761,6 @@
                     body.innerHTML = rows.join('');
                 };
 
-                // Helpers to normalize logs by ticket label so yearly counts are unique per ticket
                 function getTicketKeyForSummary(entry) {
                     const dept = String(entry.department || entry.Department || entry.service || '').toLowerCase();
                     const label = String(entry.label || entry.ticketNumber || entry.id || '').trim();
@@ -814,24 +812,20 @@
                     const currentYear = new Date().getFullYear();
                     const counts = Array(12).fill(0);
 
-                    // Build a map: "dept|label" -> earliest ISSUED Date for this year
                     const issuedMap = new Map();
 
                     logs.forEach(entry => {
                         const action = String(entry.action || entry.status || entry.Status || '').toUpperCase();
                         if (action !== 'ISSUED') return;
 
-                        // Normalize department — handles all field name variants from both collections
                         const dept = String(
                             entry.department || entry.Department || entry.service || entry.dept || ''
                         ).toLowerCase().trim();
                         if (!dept.includes(departmentKey)) return;
 
-                        // Normalize ticket label / identifier
                         const label = String(entry.label || entry.ticketNumber || entry.ticketId || entry.id || '').trim();
                         if (!label) return;
 
-                        // Resolve timestamp — include archivedAt for master_history records
                         const dateSource = entry.iso_timestamp || entry.timestamp || entry.timestamp_readable || entry.date || entry.archivedAt;
                         const entryDate = new Date(dateSource);
                         if (isNaN(entryDate.getTime())) return;
@@ -839,13 +833,11 @@
 
                         const mapKey = dept + '|' + label;
                         const existing = issuedMap.get(mapKey);
-                        // Keep the earliest occurrence (first time the ticket was issued)
                         if (!existing || entryDate.getTime() < existing.getTime()) {
                             issuedMap.set(mapKey, entryDate);
                         }
                     });
 
-                    // Tally unique tickets into their respective monthly buckets
                     issuedMap.forEach(issuedDate => {
                         const monthIndex = issuedDate.getMonth();
                         if (monthIndex >= 0 && monthIndex < 12) counts[monthIndex]++;
@@ -853,7 +845,6 @@
 
                     return counts;
                 };
-                // Expose to window so socket event listeners outside DOMContentLoaded can call it
                 window.aggregateMonthlyTicketsFromLogs = aggregateMonthlyTicketsFromLogs;
 
                 const ctxMain = document.getElementById("mainChart");
@@ -881,7 +872,6 @@
                     });
                 }
 
-                // National ID Service Desk - Daily Client Category Breakdown & Ticket Status Distribution Charts
                 const ctxOrder = document.getElementById("orderChart");
                 let orderChart = null; 
                 if (ctxOrder) {
@@ -948,8 +938,6 @@
                         }
                     });
                 }
-
-
 
                 const ctxOrderWeekly = document.getElementById("orderChartWeekly");
                 let orderChartWeekly = null; 
@@ -1400,7 +1388,6 @@
                     const logsData = await logsRes.json();
                     const allLogs = logsData.success && Array.isArray(logsData.logs) ? logsData.logs : [];
                     
-                    // Deduplicate logs to prevent double-counting
                     const deduplicatedLogs = (() => {
                         const seen = new Set();
                         const deduplicated = [];
@@ -1418,7 +1405,6 @@
                         populateSummaryDateSelectors(deduplicatedLogs);
                         updateTableSummaries(deduplicatedLogs);
 
-                        // ... rest of the code
                         const yearlyNational = aggregateMonthlyTicketsFromLogs(deduplicatedLogs, 'national');
                         const yearlyCivil = aggregateMonthlyTicketsFromLogs(deduplicatedLogs, 'civil');
                         const monthLabels = getMonthLabels();
@@ -1435,7 +1421,6 @@
                         updateSummaryTimestamps(dynamicTimestamp);
                         if (typeof window._clearStaleState === 'function') window._clearStaleState();
 
-                        // Calculate total yearly transactions and highest peak month
                         let totalYearlyTransactions = 0;
                         let highestPeakValue = 0;
                         let highestPeakMonthName = 'N/A';
@@ -1450,7 +1435,6 @@
                                 }
                             });
 
-                            // Update the dashboard elements
                             const attendanceCountEl = document.getElementById('summary-attendance-count');
                             if (attendanceCountEl) {
                                 attendanceCountEl.innerText = totalYearlyTransactions;
@@ -1464,7 +1448,6 @@
                             }
 
 
-                            // Helper aggregators for weekly/monthly visualizations
                             const msPerDay = 24 * 60 * 60 * 1000;
                             const now = new Date();
                             const nowTs = now.getTime();
@@ -1530,7 +1513,6 @@
                                 return { completed, terminated, requeued };
                             };
 
-                            // National ID weekly
                             try {
                                 const natWeeklyCat = aggregateCategory(deduplicatedLogs, 'national', 7);
                                 const natWeeklyStat = aggregateStatus(deduplicatedLogs, 'national', 7);
@@ -1543,7 +1525,6 @@
                                 if (myStatusChartMonthly) { myStatusChartMonthly.data.datasets[0].data = [natMonthlyStat.terminated, natMonthlyStat.completed, natMonthlyStat.requeued]; myStatusChartMonthly.update(); }
                             } catch(e) { console.error('National aggregations failed', e); }
 
-                            // Civil weekly/monthly
                             try {
                                 const civWeeklyCat = aggregateCategory(deduplicatedLogs, 'civil', 7);
                                 const civWeeklyStat = aggregateStatus(deduplicatedLogs, 'civil', 7);
@@ -1561,11 +1542,9 @@
                     }
                 };
 
-                // Initialize Poll Intervals
                 syncDatabaseMetrics();
                 setInterval(syncDatabaseMetrics, 15000);
 
-                // Bind Actions and Redirection View Shortcuts
                 document.querySelectorAll('.btn-graph-link[data-target]').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const section = e.currentTarget.dataset.target;
@@ -1843,7 +1822,6 @@
                 }
             }
 
-            // Socket Event Listeners for Live Inter-process Updates
             window.socket.on('ticket_logs_updated', () => {
                 if (typeof window._clearStaleState === 'function') window._clearStaleState();
                 if (typeof syncDatabaseMetrics === 'function') {

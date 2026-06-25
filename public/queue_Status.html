@@ -577,7 +577,14 @@
     function playVoiceFeedback(ticketLabel, windowName) {
         if (!window.speechSynthesis) return;
         currentlySpeakingTicket = ticketLabel;
-        const utterance = new SpeechSynthesisUtterance(`Now serving ticket number ${ticketLabel} at ${windowName}`);
+        const label = String(ticketLabel || '').trim();
+        let prefix = 'ticket number';
+        if (/^\s*(NID|NATIONAL\s*ID)/i.test(label)) {
+            prefix = 'National ID ticket number';
+        } else if (/^\s*(CR|CIVILREG|CIVIL\s*REGISTRATION)/i.test(label)) {
+            prefix = 'Civil Registration ticket number';
+        }
+        const utterance = new SpeechSynthesisUtterance(`Now serving ${prefix} ${ticketLabel} at ${windowName}`);
         utterance.onend = () => {
             if (currentlySpeakingTicket === ticketLabel) currentlySpeakingTicket = null;
         };

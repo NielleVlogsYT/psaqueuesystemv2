@@ -652,7 +652,8 @@
     function buildCivilRegistrationTicketText(raw) {
         if (!raw) return '';
         const text = String(raw).trim();
-        const exactMatch = text.match(/^CR[-_ ]*(R(?:EG(?:ULAR)?)?|P(?:R(?:IORITY)?)?)[-_ ]*([0-9]+)$/i);
+        const normalized = text.replace(/^CIVIL\s*REGISTRATION[-_ ]*/i, 'CR-').replace(/^CIVILREG[-_ ]*/i, 'CR-');
+        const exactMatch = normalized.match(/^CR[-_ ]*(R(?:EG(?:ULAR)?)?|P(?:R(?:IORITY)?)?)[-_ ]*([0-9]+)$/i);
         if (exactMatch) {
             const typeToken = exactMatch[1].toUpperCase();
             const type = /^(P|PR|PRIORITY)/i.test(typeToken) ? 'Priority' : 'Regular';
@@ -661,7 +662,7 @@
             return `Civil Registration ${type} ${number}`;
         }
 
-        const content = text.replace(/^CR[-_ ]*/i, '').replace(/[-_]+/g, ' ').trim();
+        const content = normalized.replace(/^CR[-_ ]*/i, '').replace(/[-_]+/g, ' ').trim();
         const typeOnly = content.match(/^(R|REG|REGULAR)$/i);
         const priorityOnly = content.match(/^(P|PR|PRIORITY)$/i);
         if (typeOnly) return 'Civil Registration Regular';
@@ -678,11 +679,11 @@
         let prefixWord = null;
         let rest = raw;
 
-        const m = raw.match(/^([A-Za-z]{1,5})[-_ ]?(.*)$/);
+        const m = raw.match(/^([A-Za-z]{1,10})[-_ ]?(.*)$/);
         if (m) {
             const p = m[1].toUpperCase();
             if (p === 'NID') prefixWord = 'National ID';
-            else if (p === 'CR') prefixWord = 'Civil Registration';
+            else if (p === 'CR' || p === 'CIVILREG' || p === 'CIVILREGISTRATION') prefixWord = 'Civil Registration';
             else if (p === 'R') prefixWord = 'Regular';
             else if (p === 'P') prefixWord = 'Priority';
             if (m[2] !== undefined) rest = m[2];
@@ -693,7 +694,6 @@
         let restPhonetic = null;
         if (prefixWord === 'Civil Registration') {
             const civilText = buildCivilRegistrationTicketText(raw).replace(/^Civil Registration\s*/i, '');
-            // space numeric digits so TTS reads them like National ID ("one two three" or "1 2 3")
             restPhonetic = civilText.replace(/\d+/g, (m) => m.split('').join(' '));
         }
 
@@ -723,7 +723,8 @@
         if (!name) return name;
         let s = String(name);
         s = s.replace(/\bNID\b/gi, 'National ID');
-        s = s.replace(/\bCR\b/gi, 'Civil Registration');
+        s = s.replace(/\bCR\b/gi, 'Civil Registration')
+        s = s.replace(/\bCIVILREG\b/gi, 'CR');
         return s;
     }
 

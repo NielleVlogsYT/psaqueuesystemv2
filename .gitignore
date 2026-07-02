@@ -8,3 +8,4 @@ public.7z
 temp_log_inspect.js
 serviceAccountKey.json
 tools/android-kiosk/build/
+tools/android-kiosk/keys/

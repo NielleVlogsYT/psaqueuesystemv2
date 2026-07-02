@@ -48,14 +48,17 @@ New-Item -ItemType Directory -Force -Path `
     (Join-Path $buildDir "gen"), `
     (Join-Path $buildDir "classes"), `
     (Join-Path $buildDir "dex"), `
-    (Join-Path $buildDir "keys") | Out-Null
+    (Join-Path $projectDir "keys") | Out-Null
 
 $compiledZip = Join-Path $buildDir "compiled\resources.zip"
 $unsignedApk = Join-Path $buildDir "unsigned.apk"
 $unalignedApk = Join-Path $buildDir "unaligned.apk"
 $alignedApk = Join-Path $buildDir "aligned.apk"
-$finalApk = Join-Path $repoRoot "executables\app-debug.apk"
-$keystore = Join-Path $buildDir "keys\debug.keystore"
+$finalApk = Join-Path $repoRoot "executables\PSA_Kiosk.apk"
+$legacyApk = Join-Path $repoRoot "executables\app-debug.apk"
+$keystore = Join-Path $projectDir "keys\psa-kiosk-release.jks"
+$keyAlias = "psa-kiosk-release"
+$keyPassword = if ($env:PSA_KIOSK_KEYSTORE_PASS) { $env:PSA_KIOSK_KEYSTORE_PASS } else { "psa-kiosk-local" }
 
 & $aapt2 compile --dir (Join-Path $projectDir "res") -o $compiledZip
 if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
@@ -111,21 +114,23 @@ finally {
 & $zipalign -p -f 4 $unalignedApk $alignedApk
 if ($LASTEXITCODE -ne 0) { throw "zipalign failed" }
 
-& $keytool -genkeypair `
-    -keystore $keystore `
-    -storepass android `
-    -keypass android `
-    -alias androiddebugkey `
-    -keyalg RSA `
-    -keysize 2048 `
-    -validity 10000 `
-    -dname "CN=Android Debug,O=Android,C=US" | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "keytool failed" }
+if (-not (Test-Path -LiteralPath $keystore)) {
+    & $keytool -genkeypair `
+        -keystore $keystore `
+        -storepass $keyPassword `
+        -keypass $keyPassword `
+        -alias $keyAlias `
+        -keyalg RSA `
+        -keysize 2048 `
+        -validity 10000 `
+        -dname "CN=PSA Kiosk,O=PSA Queue,C=PH" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "keytool failed" }
+}
 
 & $apksigner sign `
     --ks $keystore `
-    --ks-pass pass:android `
-    --key-pass pass:android `
+    --ks-pass "pass:$keyPassword" `
+    --key-pass "pass:$keyPassword" `
     --v4-signing-enabled false `
     --out $finalApk `
     $alignedApk
@@ -134,4 +139,6 @@ if ($LASTEXITCODE -ne 0) { throw "apksigner failed" }
 & $apksigner verify --verbose $finalApk
 if ($LASTEXITCODE -ne 0) { throw "APK signature verification failed" }
 
+Copy-Item -LiteralPath $finalApk -Destination $legacyApk -Force
 Write-Host "Built Android kiosk APK: $finalApk"
+Write-Host "Updated legacy APK path: $legacyApk"

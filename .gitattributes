@@ -1,0 +1,8 @@
+*.apk binary
+*.dll binary
+*.exe binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.pyd binary
+*.webp binary

@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>National ID (Philsys) Tabled Summary</title>
+        <link rel="icon" type="image/png" href="psa_logo.jpg">
+        <link rel="stylesheet" href="dash.css" />
+        <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
+        <link rel="icon" type="image/png" href="./res/PSA.png">
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    
+    <style>
+        :root {  --primary: #9fd4fc; --sidebar-bg: #0c2d62; --text-muted: #64748b; --white: rgba(255, 255, 255, 0.89); --shadow: 0 4px 12px rgba(0, 0, 0, 0.05); --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); --main_chart-color: rgba(255, 255, 255, 0.9); --primary-hover: #007acc; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { margin: 0; padding: 0; min-height: 100vh; background-image: linear-gradient(rgba(12, 45, 98, 0.05), rgba(12, 45, 98, 0.05)), url('/res/Philippine-Statistics-Authority-PSA.png');  background-color: #f4f6f9; background-repeat: no-repeat; background-position: center center; background-size: cover; background-attachment: fixed;}
+        .dashboard { width: 100%; min-height: 100vh; overflow-y: auto; -webkit-overflow-scrolling: touch; } 
+
+        .main-content { padding: 2rem; width: 100%;  }
+        .section { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .dashboard-header { margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: #134299; padding: 1.25rem 2rem; border-radius: 16px; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); width: 100%; box-shadow: var(--shadow); }
+        .dashboard-header h1 { color: #ffffff; margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.5px; }
+        .eyebrow { color: var(--primary); font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.75px; display: block; margin-bottom: 2px; }
+
+        .home-dashboard-clock { display: flex; flex-direction: column; align-items: flex-end; font-weight: 600; color: #1e293b; background: rgba(255, 255, 255, 0.9); border-radius: 14px; padding: 0.75rem 1.25rem; box-shadow: var(--shadow); }
+        .home-dashboard-clock .clock-display { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+        .home-dashboard-clock .date-display { font-size: 0.9rem; color: #64748b; font-weight: 500; }
+
+        .primary-btn { background: #0d6efd; color: white; border: none; padding: 0.85rem 2rem; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: var(--transition); box-shadow: 0 4px 12px rgba(13, 109, 253, 0.3); }
+        .primary-btn:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .active-report-button { background: #0b5ed7 !important; border-color: #0a58ca !important; color: #ffffff !important; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2) !important; }
+        .primary-btn.icon-btn { padding: 0.6rem 0.9rem; font-size: 1.05rem; display: inline-flex; align-items: center; justify-content: center; }
+
+        .summary-tables-container { display: flex; flex-direction: column; gap: 2rem; margin-top: 2px; }
+        .service-summary-group { display: flex; flex-direction: column; gap: 1.5rem; }
+        
+        .summary-group-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; background: rgba(255,255,255,0.85); padding: 0.75rem 1rem; border-radius: 12px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.5); }
+        .summary-group-header h3 { color: #0f172a; font-size: 1.15rem; font-weight: 700; margin: 0; }
+        .summary-controls { display: flex; align-items: center; gap: 0.5rem; }
+        .summary-controls label { font-size: 0.85rem; color: #475569; font-weight: 600; margin-bottom: 0; }
+        
+        .summary-date-select { padding: 0.45rem 1rem; border-radius: 20px; border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; font-size: 0.85rem; font-weight: 500; outline: none; }
+
+        .tables-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(45%, 1fr)); gap: 1.5rem; }
+        .table-card { background: rgba(255, 255, 255, 0.95); border-radius: 14px; padding: 1.25rem; box-shadow: var(--shadow); border: 1px solid rgba(226, 232, 240, 0.8); backdrop-filter: blur(8px); }
+        .table-card h4 { margin-bottom: 6px; color: #0f172a; font-size: 1rem; font-weight: 700; }
+        .table-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; color: #64748b; font-size: 0.8rem; }
+        
+        .summary-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; margin-top: 15px; }
+        .summary-table th, .summary-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+        .summary-table th { background-color: #f8fafc; color: #475569; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .summary-table td { color: #334155; font-weight: 500; }
+        
+        .row-total { font-weight: 700; background-color: #f8fafc; }
+        .row-total td { border-bottom: 2px solid #cbd5e1; color: #0f172a !important; font-weight: 700; }
+        .btn-graph-link { border: 1px solid rgba(13, 110, 253, 0.2); background: #eff6ff; color: #0d6efd; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.75rem; transition: var(--transition); }
+        .btn-graph-link:hover { background: #0d6efd; color: white; }
+        .btn-reset-filter { border: 1px solid rgba(34, 197, 94, 0.3); background: #f0fdf4; color: #16a34a; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.75rem; transition: var(--transition); display: inline-flex; align-items: center; gap: 4px; }
+        .btn-reset-filter:hover { background: #16a34a; color: white; }
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .status-dot.waiting { background-color: #eab308; }
+        .status-dot.serving { background-color: #3b82f6; }
+        .status-dot.completed { background-color: #22c55e; }
+        .status-dot.terminated { background-color: #ef4444; }
+
+        .main-chart-container { background: var(--main_chart-color); padding: 1rem; border-radius: 12px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); margin-top: 5px; height: 260px; display: flex; flex-direction: column; }
+        .main-chart-container h2 { font-size: 0.9rem; margin-bottom: 0.5rem; color: #475569; font-weight: 600; }
+        .main-chart-container canvas { flex-grow: 1; width: 100% !important; height: calc(100% - 25px) !important; }
+
+        @media (max-width: 768px) {
+            .dashboard-header { flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1rem; }
+            .home-dashboard-clock { width: 100%; align-items: flex-start; }
+            .main-content { padding: 1rem; }
+            .tables-grid { grid-template-columns: 1fr; }
+        }
+        /* --- Modals --- */
+
+        .modal-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 9999; padding: 1.5rem;}
+        .modal-overlay.open { display: flex; align-items: center; justify-content: center; }
+        .modal-card { background: #ffffff; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); padding: 1.5rem; text-align: left; border: 1px solid #f1f5f9;}
+        .modal-header { display: flex; align-items: center; justify-content: space-between; }
+        .modal-title { margin: 0; font-size: 1.2rem; font-weight: 700; color: #0f172a; }
+        .modal-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #94a3b8; }
+        .modal-body { margin-top: 1rem; color: #475569; font-size: 0.95rem; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+        .modal-btn { padding: 0.55rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: var(--transition); }
+        .btn-cancel { background: #f1f5f9; color: #475569; }
+        .btn-cancel:hover { background: #e2e8f0; }
+        .btn-confirm { background: var(--primary); color: #ffffff; }
+        .btn-confirm:hover { background: var(--primary-hover); }
+
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <main class="main-content">
+            <section id="analyticsNIDSection" class="section">
+                <header class="dashboard-header">
+                    <div class="left-actions" style="display:flex; align-items:center; gap:0.75rem;">
+                        <button id="btnBack" class="primary-btn icon-btn" aria-label="Back"><i class="bx bx-chevron-left" style="font-size:1.2rem;"></i></button>
+                        <div style="text-align:left;">
+                            <span class="eyebrow">Queue System - Stats</span>
+                            <h1>National ID (Philsys) Report Summary</h1>
+                        </div>
+                    </div>
+
+                    <div class="header-right" style="display:flex; align-items:center; gap:1rem;">
+                        <div class="subMenu-actions" style="display:flex; gap:0.75rem;">
+                            <button id="btnDailyReport" class="primary-btn">Daily Report</button>
+                            <button id="btnWeeklyReport" class="primary-btn">Weekly Report</button>
+                            <button id="btnMonthlyReport" class="primary-btn">Monthly Report</button>
+                        </div>
+
+                        <div class="home-dashboard-clock">
+                            <div class="clock-display" id="realtime-clock-anal">00:00:00 PM</div>
+                            <div class="date-display" id="realtime-date-anal">Loading...</div>
+                        </div>
+                    </div>
+                </header>
+            </section>
+        </main>
+
+        <section class="analytics-overview">
+            <div id="return-confirm-modal" class="modal-overlay" aria-hidden="true">
+                <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="return-modal-title">
+                    <div class="modal-header">
+                        <h2 id="return-modal-title" class="modal-title">Return to Master Administration View</h2>
+                        <button id="return-close-btn" class="modal-close" aria-label="Close Modal">✕</button>
+                    </div>
+                    <div class="modal-body">Are you certain you want to exit the live monitoring screen statistics node? Your connection parameters to the data streaming pipelines will close safely.</div>
+                    <div class="modal-actions">
+                        <button id="return-cancel-btn" class="modal-btn btn-cancel">Cancel and Remain</button>
+                        <button id="return-confirm-btn" class="modal-btn btn-confirm">Confirm Exit</button>
+                    </div>
+                </div> 
+            </div>
+            <div id="DailyReport" class="summary-tables-container" style="display: none; padding: 0 3rem;">
+                <div class="service-summary-group">
+                    <div class="summary-group-header">
+                        <h3>Daily Report Summary</h3>
+                        <div class="summary-controls">
+                            <label for="natidDateFilter">Filter Date Target:</label>
+                            <input type="date" id="natidDateFilter" class="summary-date-select" />
+                        </div>
+                    </div>
+                    <div class="tables-grid">
+                        <div class="table-card">
+                            <h4>Daily Service Volume Category Breakdown</h4>
+                            <div class="table-meta">
+                                <span>Status Matrix: <span id="nat-cat-updated">--</span></span>
+                            </div>
+                            <div class="main-chart-container">
+                                <h2>Hourly Client Volume Category</h2>
+                                <canvas id="mainChart"></canvas>
+                            </div>
+                            <table class="summary-table" id="tblNationalCategory">
+                                <thead>
+                                    <tr><th>Category Designation</th><th>Total Enrolled Records</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Regular</td><td id="nat-cat-regular">0</td></tr>
+                                    <tr><td>Senior/PWD/Maternal</td><td id="nat-cat-priority">0</td></tr>
+                                    <tr class="row-total"><td>Aggregated Sum Volume</td><td id="nat-cat-total">0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-card">
+                            <h4>Daily Ticket Status</h4>
+                            <div class="table-meta">
+                                <span>Status Matrix: <span id="nat-stat-updated">--</span></span>
+                            </div>
+                            <div class="main-chart-container">
+                                <h2>Hourly Ticket Lifespan Status</h2>
+                                <canvas id="mainStatusChart"></canvas>
+                            </div>
+                            <table class="summary-table" id="tblNationalStatus">
+                                <thead>
+                                    <tr><th>Current Status Vector</th><th>Active Metric Count</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><span class="status-dot waiting"></span> Waiting Ticket Pool</td><td id="nat-stat-waiting">0</td></tr>
+                                    <tr><td><span class="status-dot serving"></span> Requequed Tickets</td><td id="nat-stat-serving">0</td></tr>
+                               </tbody>
+
+                                <thead>
+                                    <tr><th>Ticket Status Vector</th><th>Active Count</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><span class="status-dot completed"></span> Completed Tickets</td><td id="nat-stat-completed">0</td></tr>
+                                    <tr><td><span class="status-dot terminated"></span> Terminated Tickets</td><td id="nat-stat-terminated">0</td></tr>
+                                    <tr class="row-total"><td>Total Operational Tickets</td><td id="nat-stat-total">0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="weeklyReport" class="summary-tables-container" style="display: none; padding: 0 3rem;">
+                <div class="service-summary-group">
+                    <div class="summary-group-header">
+                        <h3>Weekly Report Summary</h3>
+                        <div class="summary-controls">
+                            <label for="natidWeeklyFilter">Filter Week Target:</label>
+                            <input type="week" id="natidWeeklyFilter" class="summary-date-select" />
+                        </div>
+                    </div>
+                    <div class="tables-grid">
+                        <div class="table-card">
+                            <h4>Weekly Service Volume Category Breakdown</h4>
+                            <div class="table-meta">
+                                <span>Status Matrix: <span id="nat-cat-updated-weekly">--</span></span>
+                            </div>
+                            <div class="main-chart-container">
+                                <h2>Day-of-Week Service Volume Category</h2>
+                                <canvas id="mainWeekChart"></canvas>
+                            </div>
+                            <table class="summary-table" id="tblNationalCategoryWeekly">
+                                <thead>
+                                    <tr><th>Category Designation</th><th>Weekly Total</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Regular</td><td id="nat-cat-regular-weekly">0</td></tr>
+                                    <tr><td>Senior/PWD/Maternal</td><td id="nat-cat-priority-weekly">0</td></tr>
+                                    <tr class="row-total"><td>Aggregated Weekly Volume</td><td id="nat-cat-total-weekly">0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-card">
+                            <h4>Weekly Ticket Status</h4>
+                            <div class="table-meta">
+                                <span>Status Matrix: <span id="nat-stat-updated-weekly">--</span></span>
+                            </div>
+                            <div class="main-chart-container">
+                                <h2>Day-of-Week Ticket Status</h2>
+                                <canvas id="mainWeekStatusChart"></canvas>
+                            </div>
+                            <table class="summary-table" id="tblNationalStatusWeekly">
+                                <thead>
+                                    <tr><th>Current Status Vector</th><th>Active Metric Count</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><span class="status-dot waiting"></span> Waiting Ticket Pool</td><td id="nat-stat-waiting-weekly">0</td></tr>
+                                    <tr><td><span class="status-dot serving"></span> Requequed Tickets</td><td id="nat-stat-serving-weekly">0</td></tr>
+                               </tbody>
+
+                                <thead>
+                                    <tr><th>Ticket Status Vector</th><th>Active Count</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><span class="status-dot completed"></span> Completed Tickets</td><td id="nat-stat-completed-weekly">0</td></tr>
+                                    <tr><td><span class="status-dot terminated"></span> Terminated Tickets</td><td id="nat-stat-terminated-weekly">0</td></tr>
+                                    <tr class="row-total"><td>Total Operational Tickets</td><td id="nat-stat-total-weekly">0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="monthlyReport" class="summary-tables-container" style="display: none; padding: 0 3rem;">
+                <div class="service-summary-group">
+                    <div class="summary-group-header">
+                        <h3>Monthly Report Summary</h3>
+                        <div class="summary-controls">
+                            <label for="natidMonthlyFilter">Filter Month/Year Target:</label>
+                            <input type="month" id="natidMonthlyFilter" class="summary-date-select" />
+                        </div>
+                    </div>
+                    <div class="tables-grid">
+                        <div class="table-card">
+                            <h4>Monthly Client Volume Category Breakdown</h4>
+                            <div class="table-meta">
+                                <span>Status Matrix: <span id="nat-cat-updated-monthly">--</span></span>
+                            </div>
+                            <div class="main-chart-container">
+                                <h2>Weekly Client Volume Category</h2>
+                                <canvas id="mainMonthChart"></canvas>
+                            </div>
+                            <table class="summary-table" id="tblNationalCategoryMonthly">
+                                <thead>
+                                    <tr><th>Category Designation</th><th>Monthly Total</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Regular</td><td id="nat-cat-regular-monthly">0</td></tr>
+                                    <tr><td>Senior/PWD/Maternal</td><td id="nat-cat-priority-monthly">0</td></tr>
+                                    <tr class="row-total"><td>Aggregated Monthly Volume</td><td id="nat-cat-total-monthly">0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-card">
+                            <h4>Monthly Ticket Lifespan Status Accounting</h4>
+                            <div class="table-meta">
+                                <span>Status Matrix: <span id="nat-stat-updated-monthly">--</span></span>
+                            </div>
+                            <div class="main-chart-container">
+                                <h2>Weekly Ticket Lifespan Status</h2>
+                                <canvas id="mainMonthStatusChart"></canvas>
+                            </div>
+                            <table class="summary-table" id="tblNationalStatusMonthly">
+                                <thead>
+                                    <tr><th>Current Status Vector</th><th>Active Metric Count</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><span class="status-dot waiting"></span> Waiting Ticket Pool</td><td id="nat-stat-waiting-monthly">0</td></tr>
+                                    <tr><td><span class="status-dot serving"></span> Requequed Tickets</td><td id="nat-stat-serving-monthly">0</td></tr>
+                               </tbody>
+
+                                <thead>
+                                    <tr><th>Ticket Status Vector</th><th>Active Count</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><span class="status-dot completed"></span> Completed Tickets</td><td id="nat-stat-completed-monthly">0</td></tr>
+                                    <tr><td><span class="status-dot terminated"></span> Terminated Tickets</td><td id="nat-stat-terminated-monthly">0</td></tr>
+                                    <tr class="row-total"><td>Total Operational Tickets</td><td id="nat-stat-total-monthly">0</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        window.socket = typeof io !== 'undefined' ? io() : { on: (event, callback) => { console.log(`Offline Mode fallback engine active for: ${event}`); } };
+
+        function runGlobalClockTick() {
+            const timeZoneStringOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            const dateLongFormOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const timestampNow = new Date();
+            
+            const timeStringString = timestampNow.toLocaleTimeString(undefined, timeZoneStringOptions);
+            const dateStringString = timestampNow.toLocaleDateString(undefined, dateLongFormOptions);
+
+            const tEl = document.getElementById('realtime-clock-anal');
+            const dEl = document.getElementById('realtime-date-anal');
+            if(tEl) tEl.innerText = timeStringString;
+            if(dEl) dEl.innerText = dateStringString;
+        }
+        setInterval(runGlobalClockTick, 1000);
+        runGlobalClockTick();
+
+        function getTicketDateISO(ticket) {
+            const dateSource = ticket.iso_timestamp || ticket.timestamp || ticket.timestamp_readable || ticket.date;
+            if (!dateSource) return null;
+            const parsedDate = new Date(dateSource);
+            return Number.isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString().slice(0, 10);
+        }
+
+        function getTicketKey(ticket) {
+            const department = String(ticket.department || ticket.Department || ticket.service || '').toLowerCase();
+            const label = String(ticket.label || ticket.ticketNumber || ticket.id || '').trim();
+            return department && label ? `${department}|${label}` : null;
+        }
+
+        function getTicketTimestampValue(ticket) {
+            const dateSource = ticket.iso_timestamp || ticket.timestamp || ticket.timestamp_readable || ticket.date;
+            const parsedDate = new Date(dateSource);
+            return Number.isNaN(parsedDate.getTime()) ? 0 : parsedDate.getTime();
+        }
+
+        function getTicketActionPriority(ticket) {
+            const action = String(ticket.action || ticket.status || ticket.Status || '').toUpperCase();
+            const order = ['ISSUED', 'PENDING_REQUEUE', 'MANUALLY_REQUEUED', 'REQUEUED', 'ASSIGNED', 'COMPLETED', 'TERMINATED', 'AUTO_TERMINATED_AFTER_REQUEUE'];
+            const idx = order.indexOf(action);
+            return idx === -1 ? order.length : idx;
+        }
+
+        function normalizeLogsByTicketLabel(logs) {
+            const grouped = new Map();
+            logs.forEach(ticket => {
+                const key = getTicketKey(ticket);
+                if (!key) return;
+
+                const ts = getTicketTimestampValue(ticket);
+                const actionPriority = getTicketActionPriority(ticket);
+                const action = String(ticket.action || ticket.status || ticket.Status || '').toUpperCase();
+                const isPriority = !!ticket.isPriority || String(ticket.category || ticket.Category || '').toLowerCase().includes('priority') || String(ticket.category || ticket.Category || '').toLowerCase().includes('senior') || String(ticket.category || ticket.Category || '').toLowerCase().includes('pwd') || String(ticket.category || ticket.Category || '').toLowerCase().includes('maternal') || (ticket.label && ticket.label.includes('-P-'));
+                const department = String(ticket.department || ticket.Department || ticket.service || '').toLowerCase();
+
+                const existing = grouped.get(key);
+                if (!existing) {
+                    grouped.set(key, {
+                        latestLog: ticket,
+                        latestTimestamp: ts,
+                        latestPriority: actionPriority,
+                        isPriority,
+                        hasIssued: action === 'ISSUED',
+                        issuedTimestamp: action === 'ISSUED' ? ts : null,
+                        issuedLog: action === 'ISSUED' ? ticket : null,
+                        department
+                    });
+                    return;
+                }
+
+                existing.isPriority = existing.isPriority || isPriority;
+                existing.hasIssued = existing.hasIssued || action === 'ISSUED';
+                if (action === 'ISSUED') {
+                    if (existing.issuedTimestamp === null || ts < existing.issuedTimestamp) {
+                        existing.issuedTimestamp = ts;
+                        existing.issuedLog = ticket;
+                    }
+                }
+
+                if (ts > existing.latestTimestamp || (ts === existing.latestTimestamp && actionPriority > existing.latestPriority)) {
+                    existing.latestLog = ticket;
+                    existing.latestTimestamp = ts;
+                    existing.latestPriority = actionPriority;
+                }
+            });
+            return [...grouped.values()];
+        }
+
+        function getIsoWeekString(date) {
+            const target = new Date(date.valueOf());
+            const dayNr = (date.getDay() + 6) % 7;
+            target.setDate(target.getDate() - dayNr + 3);
+            const firstThursday = target.valueOf();
+            target.setMonth(0, 1);
+            if (target.getDay() !== 4) {
+                target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
+            }
+            const weekNum = 1 + Math.ceil((firstThursday - target) / 604800000);
+            return `${target.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+        }
+
+        function getCurrentWeekString() {
+            return getIsoWeekString(new Date());
+        }
+
+        function getCurrentMonthString() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            let cachedLogs = [];
+            let cachedTicketLogs = [];
+            let natidDateFilterTouched = false;
+            let natidWeeklyFilterTouched = false;
+            let natidMonthlyFilterTouched = false;
+
+            // 1. CHART INITIALIZATIONS WITH CORRECT DOMAIN LABELS
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { font: { size: 11, weight: '500' } }, grid: { display: false } },
+                    y: { ticks: { font: { size: 11 } }, beginAtZero: true }
+                },
+                plugins: { legend: { labels: { font: { family: "'Inter', sans-serif", weight: '600', size: 11 } } } }
+            };
+
+            // Daily Category (Hourly)
+            const ctxMain = document.getElementById("mainChart");
+            const mainChart = ctxMain ? new Chart(ctxMain.getContext("2d"), {
+                type: "line",
+                data: {
+                    labels: ["8 AM", "10 AM", "12 PM", "2 PM", "4 PM", "6 PM"],
+                    datasets: [
+                        { label: "Regular", data: [0,0,0,0,0,0], borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.04)", tension: 0.35, fill: true },
+                        { label: "Priority", data: [0,0,0,0,0,0], borderColor: "#f59e0b", backgroundColor: "rgba(245, 158, 11, 0.04)", tension: 0.35, fill: true }
+                    ]
+                },
+                options: chartOptions
+            }) : null;
+
+            // Daily Status (Hourly)
+            const ctxStatusMain = document.getElementById("mainStatusChart");
+            const mainStatusChart = ctxStatusMain ? new Chart(ctxStatusMain.getContext("2d"), {
+                type: "line",
+                data: {
+                    labels: ["8 AM", "10 AM", "12 PM", "2 PM", "4 PM", "6 PM"],
+                    datasets: [
+                        { label: "Waiting", data: [0,0,0,0,0,0], borderColor: "#eab308", backgroundColor: "rgba(234, 179, 8, 0.02)", tension: 0.35 },
+                        { label: "Serving", data: [0,0,0,0,0,0], borderColor: "#3b82f6", backgroundColor: "rgba(59, 130, 246, 0.02)", tension: 0.35 },
+                        { label: "Completed", data: [0,0,0,0,0,0], borderColor: "#22c55e", backgroundColor: "rgba(34, 197, 94, 0.02)", tension: 0.35 },
+                        { label: "Terminated", data: [0,0,0,0,0,0], borderColor: "#ef4444", backgroundColor: "rgba(239, 68, 68, 0.02)", tension: 0.35 }
+                    ]
+                },
+                options: chartOptions
+            }) : null;
+
+                // Weekly Category (Days of Week)
+            const ctxWeekMain = document.getElementById("mainWeekChart");
+            const mainWeekChart = ctxWeekMain ? new Chart(ctxWeekMain.getContext("2d"), {
+                type: "line",
+                data: {
+                    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                    datasets: [
+                        { label: "Regular", data: [0,0,0,0,0,0,0], borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.04)", tension: 0.35, fill: true },
+                        { label: "Priority", data: [0,0,0,0,0,0,0], borderColor: "#f59e0b", backgroundColor: "rgba(245, 158, 11, 0.04)", tension: 0.35, fill: true }
+                    ]
+                },
+                options: chartOptions
+            }) : null;
+
+            // Weekly Status
+            const ctxWeekStatusMain = document.getElementById("mainWeekStatusChart");
+            const mainWeekStatusChart = ctxWeekStatusMain ? new Chart(ctxWeekStatusMain.getContext("2d"), {
+                type: "line",
+                data: {
+                    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                    datasets: [
+                        { label: "Waiting", data: [0,0,0,0,0,0,0], borderColor: "#eab308", backgroundColor: "rgba(234, 179, 8, 0.02)", tension: 0.35 },
+                        { label: "Serving", data: [0,0,0,0,0,0,0], borderColor: "#3b82f6", backgroundColor: "rgba(59, 130, 246, 0.02)", tension: 0.35 },
+                        { label: "Completed", data: [0,0,0,0,0,0,0], borderColor: "#22c55e", backgroundColor: "rgba(34, 197, 94, 0.02)", tension: 0.35 },
+                        { label: "Terminated", data: [0,0,0,0,0,0,0], borderColor: "#ef4444", backgroundColor: "rgba(239, 68, 68, 0.02)", tension: 0.35 }
+                    ]
+                },
+                options: chartOptions
+            }) : null;
+
+            function renderLogDrawer(tbodyId, logs, dept, scopeFilter) {
+                const tbody = document.getElementById(tbodyId);
+                if (!tbody) return;
+                const normalized = normalizeLogsByTicketLabel(logs);
+                const filtered = normalized.filter(entry => {
+                    const l = entry.latestLog;
+                    const department = String(l.department || l.Department || l.service || '').toLowerCase();
+                    if (department !== dept) return false;
+                    return scopeFilter(l);
+                });
+                tbody.innerHTML = filtered.length === 0
+                    ? '<tr><td colspan="5" style="text-align:center;color:#94a3b8">No records found</td></tr>'
+                    : filtered.map(entry => {
+                        const l = entry.latestLog;
+                        return `
+                        <tr>
+                            <td><strong>${l.label || '—'}</strong></td>
+                            <td>${l.isPriority ? '⭐ Priority' : 'Regular'}</td>
+                            <td>${l.action || l.status || '—'}</td>
+                            <td>${l.window || l.windows || '—'}</td>
+                            <td style="font-size:0.8rem;color:#64748b">${
+                                l.iso_timestamp
+                                    ? new Date(l.iso_timestamp).toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit',second:'2-digit'})
+                                    : l.timestamp_readable || '—'
+                            }</td>
+                        </tr>`;
+                    }).join('');
+            }
+
+            // Monthly Category (Weeks of Month)
+            const ctxMonthMain = document.getElementById("mainMonthChart");
+            const mainMonthChart = ctxMonthMain ? new Chart(ctxMonthMain.getContext("2d"), {
+                type: "line",
+                data: {
+                    labels: ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"],
+                    datasets: [
+                        { label: "Regular", data: [0,0,0,0,0], borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.04)", tension: 0.35, fill: true },
+                        { label: "Priority", data: [0,0,0,0,0], borderColor: "#f59e0b", backgroundColor: "rgba(245, 158, 11, 0.04)", tension: 0.35, fill: true }
+                    ]
+                },
+                options: chartOptions
+            }) : null;
+
+            // Monthly Status
+            const ctxMonthStatusMain = document.getElementById("mainMonthStatusChart");
+            const mainMonthStatusChart = ctxMonthStatusMain ? new Chart(ctxMonthStatusMain.getContext("2d"), {
+                type: "line",
+                data: {
+                    labels: ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"],
+                    datasets: [
+                        { label: "Waiting", data: [0,0,0,0,0], borderColor: "#eab308", backgroundColor: "rgba(234, 179, 8, 0.02)", tension: 0.35 },
+                        { label: "Serving", data: [0,0,0,0,0], borderColor: "#3b82f6", backgroundColor: "rgba(59, 130, 246, 0.02)", tension: 0.35 },
+                        { label: "Completed", data: [0,0,0,0,0], borderColor: "#22c55e", backgroundColor: "rgba(34, 197, 94, 0.02)", tension: 0.35 },
+                        { label: "Terminated", data: [0,0,0,0,0], borderColor: "#ef4444", backgroundColor: "rgba(239, 68, 68, 0.02)", tension: 0.35 }
+                    ]
+                },
+                options: chartOptions
+            }) : null;
+
+            // --- 2. MODAL DIALOGS AND LOGOUT HANDLERS ---
+            const backBtn = document.getElementById("btnBack");
+            const returnConfirmModal = document.getElementById('return-confirm-modal');
+            const returnConfirmBtn = document.getElementById('return-confirm-btn');
+            const returnCancelBtn = document.getElementById('return-cancel-btn');
+            const returnCloseBtn = document.getElementById('return-close-btn');
+
+            const openReturnModal = () => {
+                if (!returnConfirmModal) return;
+                returnConfirmModal.classList.add('open');
+                returnConfirmModal.setAttribute('aria-hidden', 'false');
+            };
+            const closeReturnModal = () => {
+                if (!returnConfirmModal) return;
+                returnConfirmModal.classList.remove('open');
+                returnConfirmModal.setAttribute('aria-hidden', 'true');
+            };
+
+            if (backBtn) {
+                backBtn.addEventListener("click", openReturnModal);
+            }
+            if (returnCancelBtn) {
+                returnCancelBtn.addEventListener('click', closeReturnModal);
+            }
+            if (returnCloseBtn) {
+                returnCloseBtn.addEventListener('click', closeReturnModal);
+            }
+            if (returnConfirmBtn) {
+                returnConfirmBtn.addEventListener('click', () => { window.location.href = "../stats_Dashboard.html"; });
+            }
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    closeReturnModal();
+                }
+            });
+
+
+            // 2. TIMELINE CHART DATA PROCESSING PIPELINE
+            const populateLineGraphData = (logs) => {
+                const targetDay = document.getElementById('natidDateFilter')?.value || new Date().toISOString().slice(0, 10);
+                const targetWeek = document.getElementById('natidWeeklyFilter')?.value || getCurrentWeekString();
+                const targetMonth = document.getElementById('natidMonthlyFilter')?.value || getCurrentMonthString();
+
+                // Reset Arrays
+                const hourlyCatData = { regular: [0,0,0,0,0,0], priority: [0,0,0,0,0,0] };
+                const hourlyStatData = { waiting: [0,0,0,0,0,0], serving: [0,0,0,0,0,0], completed: [0,0,0,0,0,0], terminated: [0,0,0,0,0,0] };
+                
+                const weeklyCatData = { regular: [0,0,0,0,0,0,0], priority: [0,0,0,0,0,0,0] };
+                const weeklyStatData = { waiting: [0,0,0,0,0,0,0], serving: [0,0,0,0,0,0,0], completed: [0,0,0,0,0,0,0], terminated: [0,0,0,0,0,0,0] };
+
+                const monthlyCatData = { regular: [0,0,0,0,0], priority: [0,0,0,0,0] };
+                const monthlyStatData = { waiting: [0,0,0,0,0], serving: [0,0,0,0,0], completed: [0,0,0,0,0], terminated: [0,0,0,0,0] };
+
+                const sourceLogs = logs || [];
+                const normalizedGroups = normalizeLogsByTicketLabel(sourceLogs);
+
+                normalizedGroups.forEach(group => {
+                    if (!group.department || !(group.department.includes('nat') || group.department.includes('philsys') || group.department.includes('national'))) return;
+
+                    if (group.hasIssued && group.issuedTimestamp !== null) {
+                        const issuedDate = new Date(group.issuedTimestamp);
+                        const issuedDateStr = issuedDate.toISOString().slice(0, 10);
+                        if (issuedDateStr === targetDay) {
+                            const hours = issuedDate.getHours();
+                            let index = 0;
+                            if (hours >= 17) index = 5;
+                            else if (hours >= 15) index = 4;
+                            else if (hours >= 13) index = 3;
+                            else if (hours >= 11) index = 2;
+                            else if (hours >= 9) index = 1;
+
+                            if (group.isPriority) hourlyCatData.priority[index]++; else hourlyCatData.regular[index]++;
+                        }
+
+                        const ticketWeekStr = getIsoWeekString(new Date(group.issuedTimestamp));
+                        const ticketMonthStr = issuedDate.toISOString().slice(0, 7);
+                        if (ticketWeekStr === targetWeek) {
+                            const dayIdx = (issuedDate.getDay() + 6) % 7;
+                            if (dayIdx >= 0 && dayIdx <= 6) {
+                                if (group.isPriority) weeklyCatData.priority[dayIdx]++; else weeklyCatData.regular[dayIdx]++;
+                            }
+                        }
+                        if (ticketMonthStr === targetMonth) {
+                            const dateNum = issuedDate.getDate();
+                            let weekIdx = Math.floor((dateNum - 1) / 7);
+                            if (weekIdx > 4) weekIdx = 4;
+                            if (group.isPriority) monthlyCatData.priority[weekIdx]++; else monthlyCatData.regular[weekIdx]++;
+                        }
+                    }
+
+                    const latest = group.latestLog;
+                    const latestDateStr = getTicketDateISO(latest);
+                    if (!latestDateStr) return;
+                    const latestDate = new Date(latest.iso_timestamp || latest.timestamp || latestDateStr);
+                    const latestAction = String(latest.action || latest.status || latest.Status || '').toUpperCase();
+                    let statusType = null;
+                    if (latestAction === 'ISSUED' || latestAction === 'PENDING_REQUEUE' || latestAction === 'MANUALLY_REQUEUED' || latestAction === 'REQUEUED') statusType = 'waiting';
+                    else if (latestAction === 'ASSIGNED') statusType = 'serving';
+                    else if (latestAction === 'COMPLETED') statusType = 'completed';
+                    else if (latestAction === 'TERMINATED' || latestAction === 'AUTO_TERMINATED_AFTER_REQUEUE') statusType = 'terminated';
+
+                    if (latestDateStr === targetDay && statusType) {
+                        const hours = latestDate.getHours();
+                        let index = 0;
+                        if (hours >= 17) index = 5;
+                        else if (hours >= 15) index = 4;
+                        else if (hours >= 13) index = 3;
+                        else if (hours >= 11) index = 2;
+                        else if (hours >= 9) index = 1;
+                        hourlyStatData[statusType][index]++;
+                    }
+
+                    const latestWeekStr = getIsoWeekString(latestDate);
+                    if (latestWeekStr === targetWeek && statusType) {
+                        const dayIdx = (latestDate.getDay() + 6) % 7;
+                        if (dayIdx >= 0 && dayIdx <= 6) {
+                            weeklyStatData[statusType][dayIdx]++;
+                        }
+                    }
+
+                    const latestMonthStr = latestDate.toISOString().slice(0, 7);
+                    if (latestMonthStr === targetMonth && statusType) {
+                        const dateNum = latestDate.getDate();
+                        let weekIdx = Math.floor((dateNum - 1) / 7);
+                        if (weekIdx > 4) weekIdx = 4;
+                        monthlyStatData[statusType][weekIdx]++;
+                    }
+                });
+
+                if (mainChart) {
+                    mainChart.data.datasets[0].data = hourlyCatData.regular;
+                    mainChart.data.datasets[1].data = hourlyCatData.priority;
+                    mainChart.update('none');
+                }
+                if (mainStatusChart) {
+                    mainStatusChart.data.datasets[0].data = hourlyStatData.waiting;
+                    mainStatusChart.data.datasets[1].data = hourlyStatData.serving;
+                    mainStatusChart.data.datasets[2].data = hourlyStatData.completed;
+                    mainStatusChart.data.datasets[3].data = hourlyStatData.terminated;
+                    mainStatusChart.update('none');
+                }
+                if (mainWeekChart) {
+                    mainWeekChart.data.datasets[0].data = weeklyCatData.regular;
+                    mainWeekChart.data.datasets[1].data = weeklyCatData.priority;
+                    mainWeekChart.update('none');
+                }
+                if (mainWeekStatusChart) {
+                    mainWeekStatusChart.data.datasets[0].data = weeklyStatData.waiting;
+                    mainWeekStatusChart.data.datasets[1].data = weeklyStatData.serving;
+                    mainWeekStatusChart.data.datasets[2].data = weeklyStatData.completed;
+                    mainWeekStatusChart.data.datasets[3].data = weeklyStatData.terminated;
+                    mainWeekStatusChart.update('none');
+                }
+                if (mainMonthChart) {
+                    mainMonthChart.data.datasets[0].data = monthlyCatData.regular;
+                    mainMonthChart.data.datasets[1].data = monthlyCatData.priority;
+                    mainMonthChart.update('none');
+                }
+                if (mainMonthStatusChart) {
+                    mainMonthStatusChart.data.datasets[0].data = monthlyStatData.waiting;
+                    mainMonthStatusChart.data.datasets[1].data = monthlyStatData.serving;
+                    mainMonthStatusChart.data.datasets[2].data = monthlyStatData.completed;
+                    mainMonthStatusChart.data.datasets[3].data = monthlyStatData.terminated;
+                    mainMonthStatusChart.update('none');
+                }
+            };
+
+
+            // 3. TABLE SUMMARIES LIFECYCLE 
+            const updateTableSummaries = (logs) => {
+                normalizeNatidDefaultFilters();
+                const selectedDay = document.getElementById('natidDateFilter')?.value;
+                const selectedWeek = document.getElementById('natidWeeklyFilter')?.value;
+                const selectedMonth = document.getElementById('natidMonthlyFilter')?.value;
+
+                const targetDay = selectedDay || new Date().toISOString().slice(0, 10);
+                const targetWeek = selectedWeek || getCurrentWeekString();
+                const targetMonth = selectedMonth || getCurrentMonthString();
+
+                
+
+                const metrics = {
+                    daily: { regular: 0, priority: 0, waiting: 0, waiting_new: 0, serving: 0, serving_new: 0, completed: 0, terminated: 0 },
+                    weekly: { regular: 0, priority: 0, waiting: 0, waiting_new: 0, serving: 0, serving_new: 0, completed: 0, terminated: 0 },
+                    monthly: { regular: 0, priority: 0, waiting: 0, waiting_new: 0, serving: 0, serving_new: 0, completed: 0, terminated: 0 }
+                };
+
+                const sourceLogs = logs || [];
+                const ticketGroups = normalizeLogsByTicketLabel(sourceLogs);
+                ticketGroups.forEach(group => {
+                    const ticket = group.latestLog;
+                    const ticketDateStr = getTicketDateISO(ticket);
+                    if (!ticketDateStr || ticketDateStr !== targetDay) return;
+
+                    const department = String(ticket.department || ticket.Department || ticket.service || '').toLowerCase();
+                    if (!(department.includes('nat') || department.includes('philsys') || department.includes('national'))) return;
+
+                    if (group.hasIssued) {
+                        if (group.isPriority) {
+                            metrics.daily.priority++;
+                        } else {
+                            metrics.daily.regular++;
+                        }
+                        metrics.daily.waiting++;
+                        metrics.daily.waiting_new++; // All ISSUED are new cards
+                    }
+
+                    const rawAction = String(ticket.action || ticket.status || '').toUpperCase();
+                    if (rawAction === 'PENDING_REQUEUE' || rawAction === 'MANUALLY_REQUEUED' || rawAction === 'REQUEUED') {
+                        metrics.daily.serving++;
+                    } else if (rawAction === 'ASSIGNED') {
+                        metrics.daily.serving_new++; // ASSIGNED from new card (first-time serving)
+                    } else if (rawAction === 'COMPLETED') {
+                        metrics.daily.completed++;
+                    } else if (rawAction === 'TERMINATED' || rawAction === 'AUTO_TERMINATED_AFTER_REQUEUE') {
+                        metrics.daily.terminated++;
+                    }
+                });
+
+                ticketGroups.forEach(group => {
+                    const ticket = group.latestLog;
+                    const ticketDateStr = getTicketDateISO(ticket);
+                    if (!ticketDateStr) return;
+
+                    const department = String(ticket.department || ticket.Department || ticket.service || '').toLowerCase();
+                    if (!(department.includes('nat') || department.includes('philsys') || department.includes('national'))) return;
+
+                    const tDate = new Date(ticket.iso_timestamp || ticket.timestamp || ticketDateStr);
+                    const ticketWeekStr = getIsoWeekString(tDate);
+                    const ticketMonthStr = ticketDateStr.slice(0, 7);
+
+                    if (ticketWeekStr === targetWeek) {
+                        const wkAction = String(ticket.action || ticket.status || '').toUpperCase();
+                        if (group.hasIssued) {
+                            if (group.isPriority) { metrics.weekly.priority++; } else { metrics.weekly.regular++; }
+                        }
+                        // Waiting Pool = ISSUED only
+                        if (group.hasIssued) {
+                            metrics.weekly.waiting++;
+                            metrics.weekly.waiting_new++;
+                        }
+                        // Serving at Desk = requeued only
+                        if (wkAction === 'PENDING_REQUEUE' || wkAction === 'MANUALLY_REQUEUED' || wkAction === 'REQUEUED') {
+                            metrics.weekly.serving++;
+                        } else if (wkAction === 'ASSIGNED') {
+                            metrics.weekly.serving_new++;
+                        } else if (wkAction === 'COMPLETED') {
+                            metrics.weekly.completed++;
+                        } else if (wkAction === 'TERMINATED' || wkAction === 'AUTO_TERMINATED_AFTER_REQUEUE') {
+                            metrics.weekly.terminated++;
+                        }
+                    }
+
+                    if (ticketMonthStr === targetMonth) {
+                        const moAction = String(ticket.action || ticket.status || '').toUpperCase();
+                        if (group.hasIssued) {
+                            if (group.isPriority) { metrics.monthly.priority++; } else { metrics.monthly.regular++; }
+                        }
+                        // Waiting Pool = ISSUED only
+                        if (group.hasIssued) {
+                            metrics.monthly.waiting++;
+                            metrics.monthly.waiting_new++;
+                        }
+                        // Serving at Desk = requeued only
+                        if (moAction === 'PENDING_REQUEUE' || moAction === 'MANUALLY_REQUEUED' || moAction === 'REQUEUED') {
+                            metrics.monthly.serving++;
+                        } else if (moAction === 'ASSIGNED') {
+                            metrics.monthly.serving_new++;
+                        } else if (moAction === 'COMPLETED') {
+                            metrics.monthly.completed++;
+                        } else if (moAction === 'TERMINATED' || moAction === 'AUTO_TERMINATED_AFTER_REQUEUE') {
+                            metrics.monthly.terminated++;
+                        }
+                    }
+                });
+
+                ['daily', 'weekly', 'monthly'].forEach(scope => {
+                    const suffix = scope === 'daily' ? '' : `-${scope}`;
+                    
+                    const regEl = document.getElementById(`nat-cat-regular${suffix}`);
+                    const priEl = document.getElementById(`nat-cat-priority${suffix}`);
+                    const catTotEl = document.getElementById(`nat-cat-total${suffix}`);
+                    
+                    if (regEl) regEl.innerText = metrics[scope].regular;
+                    if (priEl) priEl.innerText = metrics[scope].priority;
+                    if (catTotEl) catTotEl.innerText = metrics[scope].regular + metrics[scope].priority;
+
+                    const wEl = document.getElementById(`nat-stat-waiting${suffix}`);
+                    const wNewEl = document.getElementById(`nat-stat-waiting-new${suffix}`);
+                    const sEl = document.getElementById(`nat-stat-serving${suffix}`);
+                    const sNewEl = document.getElementById(`nat-stat-serving-new${suffix}`);
+                    const cEl = document.getElementById(`nat-stat-completed${suffix}`);
+                    const tEl = document.getElementById(`nat-stat-terminated${suffix}`);
+                    const statTotEl = document.getElementById(`nat-stat-total${suffix}`);
+
+                    // Waiting Pool = total created (ISSUED) = regular + priority
+                    if (wEl) wEl.innerText = metrics[scope].regular + metrics[scope].priority;
+                    if (wNewEl) wNewEl.innerText = metrics[scope].waiting_new;
+                    // Serving at Desk = requeued tickets only
+                    if (sEl) sEl.innerText = metrics[scope].serving;
+                    if (sNewEl) sNewEl.innerText = metrics[scope].serving_new;
+                    if (cEl) cEl.innerText = metrics[scope].completed;
+                    if (tEl) tEl.innerText = metrics[scope].terminated;
+                    // Total = Completed + Terminated (must equal total created volume)
+                    if (statTotEl) {
+                        statTotEl.innerText = metrics[scope].completed + metrics[scope].terminated;
+                    }
+                });
+
+                populateLineGraphData(logs);
+            };
+
+            const updateSummaryTimestamps = (text) => {
+                ['nat-cat-updated', 'nat-stat-updated', 'nat-cat-updated-weekly', 'nat-stat-updated-weekly', 'nat-cat-updated-monthly', 'nat-stat-updated-monthly'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerText = text;
+                });
+            };
+
+            function deduplicateLogs(logs) {
+                const seen = new Set();
+                const deduplicated = [];
+                logs.forEach(log => {
+                    const key = `${log.iso_timestamp || ''}|${log.label || ''}|${log.department || ''}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        deduplicated.push(log);
+                    }
+                });
+                return deduplicated;
+            }
+
+            function toggleLogDrawer(element, drawerId) {
+                const drawer = document.getElementById(drawerId);
+                if (!drawer) {
+                    console.warn(`Drawer ${drawerId} not found`);
+                    return;
+                }
+                const isOpen = drawer.style.display === 'block';
+                drawer.style.display = isOpen ? 'none' : 'block';
+                element.classList.toggle('arrow-up', !isOpen);
+                element.classList.toggle('arrow-down', isOpen);
+            }
+
+            function populateSummaryDateSelectors(logs) {
+                const datesSet = new Set();
+                logs.forEach(ticket => { const department = String(ticket.department || ticket.Department || ticket.service || '').toLowerCase(); if (!(department.includes('nat') || department.includes('philsys') || department.includes('national'))) return; const iso = getTicketDateISO(ticket); if (iso) datesSet.add(iso); });
+                const sortedDates = [...datesSet].sort();
+                if (sortedDates.length === 0) return;
+
+                const minYear = new Date(sortedDates[0]).getFullYear();
+                const maxYear = new Date(sortedDates[sortedDates.length - 1]).getFullYear();
+                const today = new Date().toISOString().slice(0, 10);
+
+                const input = document.getElementById('natidDateFilter');
+                if (input && !input.value) {
+                    input.min = sortedDates[0];
+                    input.max = sortedDates[sortedDates.length - 1] > today ? sortedDates[sortedDates.length - 1] : today;
+                    input.value = today;
+                }
+
+                const inputWeek = document.getElementById('natidWeeklyFilter');
+                if (inputWeek && !inputWeek.value) {
+                    const firstWeek = getIsoWeekString(new Date(sortedDates[0]));
+                    const lastWeek = getIsoWeekString(new Date(sortedDates[sortedDates.length - 1]));
+                    const currentWeek = getCurrentWeekString();
+                    inputWeek.min = firstWeek;
+                    inputWeek.max = currentWeek > lastWeek ? currentWeek : lastWeek;
+                    inputWeek.value = currentWeek;
+                }
+
+                const inputMonth = document.getElementById('natidMonthlyFilter');
+                if (inputMonth && !inputMonth.value) {
+                    const currentMonthStr = getCurrentMonthString();
+                    inputMonth.min = `${minYear}-01`;
+                    inputMonth.max = currentMonthStr > `${maxYear}-12` ? currentMonthStr : `${maxYear}-12`;
+                    inputMonth.value = currentMonthStr;
+                }
+            }
+
+            function getCurrentActiveSection() {
+                if (document.getElementById('DailyReport')?.style.display === 'block') return 'daily';
+                if (document.getElementById('weeklyReport')?.style.display === 'block') return 'weekly';
+                if (document.getElementById('monthlyReport')?.style.display === 'block') return 'monthly';
+                return 'daily';
+            }
+
+            function getWeekStartEnd(isoWeekString) {
+                const [year, weekPart] = isoWeekString.split('-W');
+                const weekNumber = Number(weekPart);
+                if (!year || Number.isNaN(weekNumber)) return { start: new Date().toISOString().slice(0, 10), end: new Date().toISOString().slice(0, 10) };
+
+                const simpleDate = new Date(Date.UTC(Number(year), 0, 4));
+                const dayOfWeek = simpleDate.getUTCDay() || 7;
+                const weekStart = new Date(simpleDate);
+                weekStart.setUTCDate(simpleDate.getUTCDate() + (weekNumber - 1) * 7 - (dayOfWeek - 1));
+                const weekEnd = new Date(weekStart);
+                weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+
+                return {
+                    start: weekStart.toISOString().slice(0, 10),
+                    end: weekEnd.toISOString().slice(0, 10)
+                };
+            }
+
+            function normalizeNatidDefaultFilters() {
+                const currentDay = new Date().toISOString().slice(0, 10);
+                const currentWeek = getCurrentWeekString();
+                const currentMonth = getCurrentMonthString();
+
+                const dateInput = document.getElementById('natidDateFilter');
+                if (dateInput && !natidDateFilterTouched) {
+                    dateInput.value = currentDay;
+                }
+
+                const weekInput = document.getElementById('natidWeeklyFilter');
+                if (weekInput && !natidWeeklyFilterTouched) {
+                    weekInput.value = currentWeek;
+                }
+
+                const monthInput = document.getElementById('natidMonthlyFilter');
+                if (monthInput && !natidMonthlyFilterTouched) {
+                    monthInput.value = currentMonth;
+                }
+            }
+
+            function resetNIDFilters(scope) {
+                const currentDay = new Date().toISOString().slice(0, 10);
+                const currentWeek = getCurrentWeekString();
+                const currentMonth = getCurrentMonthString();
+
+                document.querySelectorAll('.cr-filter-note').forEach(el => el.remove());
+
+                if (scope === 'daily' || scope === 'all') {
+                    const dateInput = document.getElementById('natidDateFilter');
+                    if (dateInput) {
+                        dateInput.value = currentDay;
+                        natidDateFilterTouched = true;
+                    }
+                }
+
+                if (scope === 'weekly' || scope === 'all') {
+                    const weekInput = document.getElementById('natidWeeklyFilter');
+                    if (weekInput) {
+                        weekInput.value = currentWeek;
+                        natidWeeklyFilterTouched = true;
+                    }
+                }
+
+                if (scope === 'monthly' || scope === 'all') {
+                    const monthInput = document.getElementById('natidMonthlyFilter');
+                    if (monthInput) {
+                        monthInput.value = currentMonth;
+                        natidMonthlyFilterTouched = true;
+                    }
+                }
+
+                document.getElementById('natidDateFilter')?.classList.remove('filter-note-added-date');
+                document.getElementById('natidWeeklyFilter')?.classList.remove('filter-note-added-week');
+                document.getElementById('natidMonthlyFilter')?.classList.remove('filter-note-added-month');
+
+                syncDatabaseMetrics();
+            }
+
+
+
+
+            const syncDatabaseMetrics = async () => {
+                try {
+                    const today = new Date().toISOString().slice(0, 10);
+                    const activeSection = getCurrentActiveSection();
+
+                    let start, end;
+                    if (activeSection === 'daily') {
+                        const day = document.getElementById('natidDateFilter')?.value || today;
+                        start = day;
+                        end = day;
+                    } else if (activeSection === 'weekly') {
+                        const week = document.getElementById('natidWeeklyFilter')?.value || getCurrentWeekString();
+                        const range = getWeekStartEnd(week);
+                        start = range.start;
+                        end = range.end;
+                    } else {
+                        const month = document.getElementById('natidMonthlyFilter')?.value || getCurrentMonthString();
+                        start = `${month}-01`;
+                        const [year, monthNum] = month.split('-');
+                        end = new Date(Number(year), Number(monthNum), 0).toISOString().slice(0, 10);
+                    }
+
+                    const res = await fetch(`/api/ticket-logs-range?start=${start}&end=${end}&department=national`);
+                    const data = await res.json();
+                    if (data.success) {
+                        cachedLogs = deduplicateLogs(data.logs || []);
+                        updateTableSummaries(cachedLogs);
+                        
+                        const targetDay = document.getElementById('natidDateFilter')?.value || today;
+                        const scopeFilterDaily = (log) => getTicketDateISO(log) === targetDay;
+                        renderLogDrawer('tbodyCrDailyLogs', cachedLogs, 'national', scopeFilterDaily);
+                    } else {
+                        cachedLogs = [];
+                    }
+                } catch (err) {
+                    console.warn('Sync failed:', err);
+                    cachedLogs = [];
+                }
+            };
+
+            const switchSection = (sectionId) => {
+                const sections = ['DailyReport', 'weeklyReport', 'monthlyReport'];
+                const activeButtonMap = {
+                    DailyReport: 'btnDailyReport',
+                    weeklyReport: 'btnWeeklyReport',
+                    monthlyReport: 'btnMonthlyReport'
+                };
+
+                sections.forEach(id => {
+                    const section = document.getElementById(id);
+                    if (section) section.style.display = id === sectionId ? 'block' : 'none';
+                });
+
+                ['btnDailyReport', 'btnWeeklyReport', 'btnMonthlyReport'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.classList.toggle('active-report-button', id === activeButtonMap[sectionId]);
+                });
+            };
+
+            document.getElementById('btnDailyReport')?.addEventListener('click', () => switchSection('DailyReport'));
+            document.getElementById('btnWeeklyReport')?.addEventListener('click', () => switchSection('weeklyReport'));
+            document.getElementById('btnMonthlyReport')?.addEventListener('click', () => switchSection('monthlyReport'));
+
+            switchSection('DailyReport');
+            await syncDatabaseMetrics();
+            setInterval(syncDatabaseMetrics, 15000);
+            document.getElementById('ndiDateFilter')?.addEventListener('change', () => {
+                nidDateFilterTouched = true;
+                syncDatabaseMetrics(); 
+            });
+
+            ['natidDateFilter', 'natidWeeklyFilter', 'natidMonthlyFilter'].forEach(id => {
+                document.getElementById(id)?.addEventListener('change', (e) => {
+                    if (id === 'natidDateFilter') natidDateFilterTouched = true;
+                    if (id === 'natidWeeklyFilter') natidWeeklyFilterTouched = true;
+                    if (id === 'natidMonthlyFilter') natidMonthlyFilterTouched = true;
+
+                    if (e.target.value) {
+                        let formattedText = e.target.value;
+                        if(id === 'natidDateFilter') {
+                            formattedText = new Date(e.target.value).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+                        } else if(id === 'natidWeeklyFilter') {
+                            const [year, week] = e.target.value.split('-W');
+                            formattedText = `Week ${week}, ${year}`;
+                        } else if(id === 'natidMonthlyFilter') {
+                            formattedText = new Date(`${e.target.value}-01`).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
+                        }
+                        updateSummaryTimestamps(`for ${formattedText}`);
+                    }
+                    if (cachedLogs.length > 0) {
+                        updateTableSummaries(cachedLogs);
+                    } else {
+                        syncDatabaseMetrics();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

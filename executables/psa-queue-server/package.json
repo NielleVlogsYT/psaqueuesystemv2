@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "ex": "^0.1.4",
+    "express": "^5.2.1",
+    "firebase-admin": "^10.3.0",
+    "googleapis": "^171.4.0",
+    "mongodb": "^7.2.0",
+    "nodemailer": "^9.0.0",
+    "socket.io": "^4.5.4"
+  },
+  "name": "psa-queue",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

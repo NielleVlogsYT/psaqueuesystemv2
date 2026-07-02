@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=yes">
+    <title>PSA Professional Queue Display</title>
+    <link rel="icon" type="image/png" href="./res/PSA.png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'TrajanPro';
+            src: url('./res/fonts/TrajanPro-Regular.woff2') format('woff2'),
+                 url('./res/fonts/TrajanPro-Regular.woff') format('woff'),
+                 url('./res/fonts/TrajanPro-Regular.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+        :root {
+            --bg-dark: #071426;
+            --panel-bg: rgba(15, 32, 67, 0.7);
+            --card-bg: rgba(255, 255, 255, 0.06);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --text-light: #f8f9fa;
+            --text-muted: #94a3b8;
+            --psa-gold: #ffd700;
+            --accent-blue: #03227e;
+            --accent-green: #c06a08;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            overflow: hidden; 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: var(--text-light);
+            background-color: var(--bg-dark);
+        }
+
+        .landscape-wrapper {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 20px 0 20px;
+            background: radial-gradient(circle at top right, rgba(16, 45, 107, 0.9), rgba(6, 15, 38, 0.95)), url('./res/PSA-BG.png') center/cover fixed;
+            background-blend-mode: overlay;
+        }
+
+        /* Header Layout */
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            background: rgba(11, 39, 64, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .header-logo-area {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .psa-logo {
+            width: clamp(60px, 6vw, 100px);
+            height: clamp(60px, 6vw, 100px);
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));
+        }
+
+        .header-title-container h2 {
+            font-size: clamp(1.4rem, 2.5vw, 2.4rem);
+            font-weight: 900;
+            margin: 0;
+            color: var(--text-light);
+            letter-spacing: 1.5px;
+            font-family: 'TrajanPro', 'Trajan', 'Cinzel', serif;
+        }
+
+        .header-title-container h4 {
+            font-family: 'TrajanPro', 'Trajan', serif;
+            font-weight: 700;
+            margin: 4px 0 0;
+            color: var(--text-light);
+            letter-spacing: 1px;
+        }
+
+        .clock-container {
+            text-align: right;
+        }
+
+        .clock-display {
+            font-family: 'Inter', monospace;
+            font-size: clamp(2rem, 3.5vw, 3rem);
+            font-weight: 900;
+            color: var(--psa-gold);
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.25);
+            line-height: 1;
+        }
+
+        .date-display {
+            font-size: clamp(0.9rem, 1.2vw, 1.2rem);
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Main Content Workspace */
+        .departments-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; 
+            margin-bottom: 15px;
+        }
+
+        .service-row {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            min-height: 0;
+            background: rgba(11, 39, 64, 0.95);
+            border: 3px solid #0b2740;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        }
+
+        .dept-divider {
+            width: 100%;
+            height: 3px;
+            background: #ffffff;
+            border-radius: 1px;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+        }
+
+        .strip-divider {
+            width: 100%;
+            height: 3px;
+            border-radius: 1px;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+            padding: 20px 0;
+        }
+
+
+        .serving-main {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .waiting-sidebar {
+            flex: 1.2;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #f4f6fb;
+            padding: 15px;
+        }
+
+        /* Tags */
+        .dept-tag {
+            font-size: 1.1rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 8px 16px;
+            margin-bottom: 15px;
+            align-self: flex-start;
+            border-radius: 4px;
+        }
+        .tag-nid { background: #03227e; color: white; }
+        .tag-civ { background: #8a4a01; color: white; }
+
+        /* Counter Window Cards Layout */
+        .cards-grid {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .window-card {
+            background: #f8fafc;
+            border: 3px solid #000000;
+            padding: 28px 20px 20px;
+            text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            color: #0f172a;
+        }
+
+        .win-title {
+            position: absolute;
+            top: 18px;
+            left: 20px;
+            font-size: clamp(1.2rem, 1.8vw, 1.8rem);
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 1.8px;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            transition: color 0.3s ease;
+        }
+
+        .ticket-number {
+            font-size: clamp(3rem, 5.5vw, 5.5rem);
+            font-weight: 900;
+            line-height: 1;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -1px;
+            margin: auto 0;
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        /* Neon Indicators per Status Rule */
+        .window-card.closing { opacity: 1.0; }
+        .window-card.closing .ticket-number { color: var(--text-muted); text-shadow: none; }
+        .window-card.closing .win-title { color: #0f172a; }
+
+        .active-blue { border: 3px solid var(--accent-blue); }
+        .active-blue:not(.closing) .ticket-number { color: var(--accent-blue); text-shadow: 0 0 30px rgba(56, 189, 248, 0.3); }
+        .active-blue:not(.closing) .win-title { color: var(--accent-blue); }
+
+        .active-green { border: 3px solid var(--accent-green); }
+        .active-green:not(.closing) .ticket-number { color: var(--accent-green); text-shadow: 0 0 30px rgba(245, 158, 11, 0.3); }
+        .active-green:not(.closing) .win-title { color: var(--accent-green); }
+
+        /* Queue Lists Structure */
+        .queue-block {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .queue-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .queue-title i {
+            color: #0f172a;
+        }
+
+        .queue-block.waiting-queue,
+        .queue-block.requeued-queue {
+            padding: 0;
+        }
+
+        .queue-block.waiting-queue .queue-title,
+        .queue-block.requeued-queue .queue-title {
+            color: #ffffff;
+            margin-bottom: 12px;
+            background: #03227e;
+            padding: 12px 14px;
+            border-radius: 12px;
+            box-shadow: 0 8px 18px rgba(56, 189, 248, 0.25);
+        }
+
+        .queue-block.waiting-queue .queue-title i,
+        .queue-block.requeued-queue .queue-title i {
+            color: #ffffff;
+        }
+
+        .token-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-auto-rows: minmax(56px, auto);
+            gap: 10px;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .token-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            background: transparent;
+            border: none;
+            color: #0f172a;
+            font-weight: 800;
+            font-size: 1.4rem;
+            width: 100%;
+            min-height: 58px;
+        }
+
+        .token-row.priority {
+            background: transparent;
+            border: none;
+            color: #d97706;
+        }
+        .token-row.priority .token-label { color: #d97706; }
+
+        .token-label {
+            font-size: 1.45rem;
+            line-height: 1.1;
+            letter-spacing: 0.2px;
+        }
+
+        .token-timer {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 3px 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #000000;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .waiting-text {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .waiting-more {
+            font-size: 0.85rem;
+            color: var(--psa-gold);
+            font-weight: 700;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .waiting-more-row {
+            padding: 12px 14px;
+            background: #fde68a;
+            border: 2px solid #f59e0b;
+            color: #a94609;
+            font-weight: 900;
+            text-align: center;
+            margin-top: 12px;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        /* Bottom Marquee Running Strip */
+        .ticker-strip {
+            height: 55px;
+            background: #ffffff;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            margin: 0 -20px; 
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .ticker-wrap {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 60s linear infinite;
+        }
+
+        .ticker-item {
+            display: inline-block;
+            padding-right: 4rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: black;
+
+        }
+
+        .ticker-item i {
+            color: var(--psa-gold);
+            margin-right: 12px;
+        }
+
+        @keyframes marquee {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+
+        /* Audio Overlay */
+        .audio-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(6, 15, 38, 0.98);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(20px);
+            transition: opacity 0.5s ease;
+        }
+
+        .audio-box {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 40px;
+            text-align: center;
+            max-width: 480px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        @keyframes pulse-new {
+            0%, 100% { background: var(--card-bg); transform: scale(1); }
+            50% { background: rgba(255, 215, 0, 0.15); transform: scale(1.01); }
+        }
+        .new-call { animation: pulse-new 0.8s ease-in-out 4; }
+
+        /* Layout Responsive Adaptation Rules */
+        @media (max-width: 991px) {
+            .service-row { flex-direction: column; height: auto; }
+            .waiting-sidebar { min-width: 100%; }
+            body, html { overflow-y: auto; height: auto; }
+            .landscape-wrapper { height: auto; }
+            .token-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 12px;
+            }
+            .token-row {
+                font-size: 1.25rem;
+                min-height: 52px;
+            }
+            .token-label {
+                font-size: 1.3rem;
+            }
+            .token-timer {
+                font-size: 0.85rem;
+                padding: 2px 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div id="audio-init-overlay" class="audio-overlay">
+    <div class="audio-box">
+        <i class="fas fa-volume-up fa-4x mb-4 text-warning" style="filter: drop-shadow(0 0 15px rgba(255,215,0,0.3));"></i>
+        <h4 class="font-weight-bold text-white mb-2">Queue System Audio Announcement</h4>
+        <p style="color: var(--text-muted); font-size: 0.95rem;" class="mb-4">Please enable the system audio module to authorize automatic live voice queue updates.</p>
+        <button id="btn-unlock-audio" class="btn btn-warning btn-lg font-weight-bold text-dark px-5 py-3" style="border-radius: 4px;">
+            <i class="fas fa-play mr-2"></i> Enable Voice System
+        </button>
+    </div>
+</div>
+
+<div class="landscape-wrapper">
+    <div class="main-header">
+        <div class="header-logo-area">
+            <img src="./res/PSA-removebg-preview.png" alt="PSA Logo" class="psa-logo">
+            <div class="header-title-container">
+                <h2>Philippine Statistics Authority</h2> 
+                <h4>Provincial Statistical Office - Bulacan </h4> 
+                <div style="color: var(--psa-gold); font-weight: 800; font-size: 1.1rem; letter-spacing: 1px;"></div>
+            </div>
+        </div>
+        <div class="clock-container">
+            <div class="clock-display" id="realtime-clock">00:00:00 PM</div>
+            <div class="date-display" id="realtime-date">Loading System Context Date...</div>
+        </div>
+    </div>
+
+    <div class="departments-wrapper">
+        <div class="service-row">
+            <div class="serving-main">
+                <div class="dept-tag tag-nid"><i class="fas fa-id-card mr-2"></i> National ID</div>
+                <div class="cards-grid">
+                    <div class="window-card active-blue" id="card-nid-w1">
+                        <div class="win-title"><i class="fas fa-desktop"></i> Window 1</div>
+                        <div class="ticket-number" id="nid-w1">CLOSED</div>
+                    </div>
+                    <div class="window-card active-blue" id="card-nid-w2">
+                        <div class="win-title"><i class="fas fa-desktop"></i> Window 2</div>
+                        <div class="ticket-number" id="nid-w2">CLOSED</div>
+                    </div>
+                    <div class="window-card active-green" id="card-nid-prio">
+                        <div class="win-title"><i class="fas fa-star"></i> Priority Window</div>
+                        <div class="ticket-number" id="nid-prio">CLOSED</div>
+                    </div>
+                </div>
+            </div>
+            <div class="waiting-sidebar">
+                    <div class="queue-block waiting-queue">
+                    <div class="queue-title"><span>Waiting Queue</span><i class="fas fa-users"></i></div>
+                    <div class="token-list" id="wait-nid"></div>
+                </div>
+                <div class="queue-block requeued-queue">
+                    <div class="queue-title"><span>Requeued Tickets</span><i class="fas fa-history"></i></div>
+                    <div class="token-list" id="requeue-nid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dept-divider"></div>
+
+        <div class="service-row">
+            <div class="serving-main">
+                <div class="dept-tag tag-civ"><i class="fas fa-file-invoice mr-2"></i> Civil Registration</div>
+                <div class="cards-grid">
+                    <div class="window-card active-blue" id="card-civ-w1">
+                        <div class="win-title"><i class="fas fa-desktop"></i> Window 1</div>
+                        <div class="ticket-number" id="civ-window-1">CLOSED</div>
+                    </div>
+                    <div class="window-card active-blue" id="card-civ-w2">
+                        <div class="win-title"><i class="fas fa-desktop"></i> Window 2</div>
+                        <div class="ticket-number" id="civ-window-2">CLOSED</div>
+                    </div>
+                </div>
+            </div>
+            <div class="waiting-sidebar">
+                    <div class="queue-block waiting-queue">
+                    <div class="queue-title"><span>Waiting Queue</span><i class="fas fa-users"></i></div>
+                    <div class="token-list" id="wait-civ"></div>
+                </div>
+                <div class="queue-block requeued-queue">
+                    <div class="queue-title"><span>Requeued Tickets</span><i class="fas fa-history"></i></div>
+                    <div class="token-list" id="requeue-civ"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ticker-strip">
+        <div class="ticker-strip">
+            <div class="ticker-wrap">
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Welcome to Philippine Statistics Authority Provincial Statistical Office - Bulacan </div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Website : https://rsso03.psa.gov.ph/bulacan </div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Appointment Website : https://appointment.psa.gov.ph/</div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Telephone Number : (044)662-3024</div>
+                <div class="ticker-item"><i class="fas fa-info-circle"></i> Email : bulacan@psa.gov.ph</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="strip-divider"></div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    let currentlySpeakingTicket = null;
+    let latestQueueState = null;
+    let activeWindows = {
+        national: { window1: false, window2: false, priorityWindow: false },
+        civil: { window1: false, window2: false }
+    };
+
+    function playVoiceFeedback(ticketLabel, windowName) {
+        if (!window.speechSynthesis) return;
+        currentlySpeakingTicket = ticketLabel;
+        const label = String(ticketLabel || '').trim();
+        let prefix = 'ticket number';
+        if (/^\s*(NID|NATIONAL\s*ID)/i.test(label)) {
+            prefix = 'National ID ticket number';
+        } else if (/^\s*(CR|CIVILREG|CIVIL\s*REGISTRATION)/i.test(label)) {
+            prefix = 'Civil Registration ticket number';
+        }
+        const utterance = new SpeechSynthesisUtterance(`Now serving ${prefix} ${ticketLabel} at ${windowName}`);
+        utterance.onend = () => {
+            if (currentlySpeakingTicket === ticketLabel) currentlySpeakingTicket = null;
+        };
+        window.speechSynthesis.speak(utterance);
+    }
+
+    socket.on('stop_voice', (data) => {
+        if (window.speechSynthesis && currentlySpeakingTicket === data.ticketLabel) {
+            window.speechSynthesis.cancel();
+            currentlySpeakingTicket = null;
+        }
+    });
+
+    let audioContextUnlocked = false;
+    let targetSystemLocale = 'en-US';
+    
+    document.getElementById('btn-unlock-audio').addEventListener('click', () => {
+        audioContextUnlocked = true;
+        const overlay = document.getElementById('audio-init-overlay');
+        overlay.style.backdropFilter = 'none';
+        overlay.style.webkitBackdropFilter = 'none';
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 500);
+        
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const emptyUtterance = new SpeechSynthesisUtterance(" ");
+            emptyUtterance.volume = 0;
+            window.speechSynthesis.speak(emptyUtterance);
+        }
+    });
+
+    function updateTime() {
+        const now = new Date();
+        document.getElementById('realtime-clock').innerText = now.toLocaleTimeString();
+        document.getElementById('realtime-date').innerText = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    setInterval(updateTime, 1000);
+
+    function renderQueueState(state) {
+        latestQueueState = state || latestQueueState;
+        if (!latestQueueState) return;
+        const serving = latestQueueState?.currentServing || {};
+        const waiting = latestQueueState?.waitingQueue || { national: [], civil: [] };
+
+        updateNumber('nid-w1', serving.national?.window1?.label, 'National ID Window 1', activeWindows.national.window1, 'card-nid-w1');
+        updateNumber('nid-w2', serving.national?.window2?.label, 'National ID Window 2', activeWindows.national.window2, 'card-nid-w2');
+        updateNumber('nid-prio', serving.national?.priorityWindow?.label, 'National ID Priority Window', activeWindows.national.priorityWindow, 'card-nid-prio');
+        updateNumber('civ-window-1', formatCivilRegistrationLabel(serving.civil?.window1?.label), 'Civil Registration Window 1', activeWindows.civil.window1, 'card-civ-w1');
+        updateNumber('civ-window-2', formatCivilRegistrationLabel(serving.civil?.window2?.label), 'Civil Registration Window 2', activeWindows.civil.window2, 'card-civ-w2');
+
+        const maxVisibleTickets = 6;
+        const maxVisibleTicketsWithOverflow = 5;
+
+        const nationalQueueTotal = waiting.national.length;
+        const civilQueueTotal = waiting.civil.length;
+        const nationalQueueLimited = waiting.national.slice(0, nationalQueueTotal > maxVisibleTickets ? maxVisibleTicketsWithOverflow : nationalQueueTotal);
+        const civilQueueLimited = waiting.civil.slice(0, civilQueueTotal > maxVisibleTickets ? maxVisibleTicketsWithOverflow : civilQueueTotal);
+        renderWait('wait-nid', nationalQueueLimited, nationalQueueTotal);
+        renderWait('wait-civ', civilQueueLimited, civilQueueTotal);
+
+        const nationalRequeueFull = waiting.national.filter(t => t.requeueTime);
+        const civilRequeueFull = waiting.civil.filter(t => t.requeueTime);
+        const nationalRequeueTotal = nationalRequeueFull.length;
+        const civilRequeueTotal = civilRequeueFull.length;
+        const nationalRequeueLimited = nationalRequeueFull.slice(0, nationalRequeueTotal > maxVisibleTickets ? maxVisibleTicketsWithOverflow : nationalRequeueTotal);
+        const civilRequeueLimited = civilRequeueFull.slice(0, civilRequeueTotal > maxVisibleTickets ? maxVisibleTicketsWithOverflow : civilRequeueTotal);
+        renderRequeueList('requeue-nid', nationalRequeueLimited, nationalRequeueTotal);
+        renderRequeueList('requeue-civ', civilRequeueLimited, civilRequeueTotal);
+    }
+
+    function buildCivilRegistrationTicketText(raw) {
+        if (!raw) return '';
+        const text = String(raw).trim();
+        const normalized = text.replace(/^CIVIL\s*REGISTRATION[-_ ]*/i, 'CR-').replace(/^CIVILREG[-_ ]*/i, 'CR-');
+        const exactMatch = normalized.match(/^CR[-_ ]*(R(?:EG(?:ULAR)?)?|P(?:R(?:IORITY)?)?)[-_ ]*([0-9]+)$/i);
+        if (exactMatch) {
+            const typeToken = exactMatch[1].toUpperCase();
+            const type = /^(P|PR|PRIORITY)/i.test(typeToken) ? 'Priority' : 'Regular';
+            // Preserve leading zeros (do not coerce to Number)
+            const number = exactMatch[2] || '';
+            return `Civil Registration ${type} ${number}`;
+        }
+
+        const content = normalized.replace(/^CR[-_ ]*/i, '').replace(/[-_]+/g, ' ').trim();
+        const typeOnly = content.match(/^(R|REG|REGULAR)$/i);
+        const priorityOnly = content.match(/^(P|PR|PRIORITY)$/i);
+        if (typeOnly) return 'Civil Registration Regular';
+        if (priorityOnly) return 'Civil Registration Priority';
+
+        if (content) {
+            return `Civil Registration ${content}`;
+        }
+        return 'Civil Registration';
+    }
+
+    function buildLocalizedPhrase(ticketNumber, windowName, preferredLocale) {
+        const raw = String(ticketNumber || '').trim();
+        let prefixWord = null;
+        let rest = raw;
+
+        const m = raw.match(/^([A-Za-z]{1,10})[-_ ]?(.*)$/);
+        if (m) {
+            const p = m[1].toUpperCase();
+            if (p === 'NID') prefixWord = 'National ID';
+            else if (p === 'CR' || p === 'CIVILREG' || p === 'CIVILREGISTRATION') prefixWord = 'Civil Registration';
+            else if (p === 'R') prefixWord = 'Regular';
+            else if (p === 'P') prefixWord = 'Priority';
+            if (m[2] !== undefined) rest = m[2];
+        }
+
+        const digitMap = { '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine' };
+        const restChars = rest.split('').filter(c => c !== '-' && c !== '_');
+        let restPhonetic = null;
+        if (prefixWord === 'Civil Registration') {
+            const civilText = buildCivilRegistrationTicketText(raw).replace(/^Civil Registration\s*/i, '');
+            restPhonetic = civilText.replace(/\d+/g, (m) => m.split('').join(' '));
+        }
+
+        if (!restPhonetic) {
+            restPhonetic = restChars.map(ch => {
+                if (/[0-9]/.test(ch)) return digitMap[ch] || ch;
+                if (/[A-Za-z]/.test(ch)) {
+                    const up = ch.toUpperCase();
+                    if (up === 'R') return 'regular';
+                    if (up === 'P') return 'priority';
+                    return up.split('').join(' ');
+                }
+                return ch;
+            }).join(' ');
+        }
+
+        const phoneticTicket = prefixWord ? `${prefixWord} ${restPhonetic}`.trim() : raw.split('').map(char => char === '-' ? (preferredLocale === 'en-US' ? ' ' : ' dash ') : char).join(' ');
+
+        const dialogueTemplates = {
+            'en-US': `${phoneticTicket}. proceed to ${windowName}. Thank you.`,
+            'fil-PH': `Numero ng tiket, ${phoneticTicket}. Pumunta po sa ${windowName}. Salamat po.`
+        };
+        return dialogueTemplates[preferredLocale] || dialogueTemplates['en-US'];
+    }
+
+    function normalizeWindowName(name) {
+        if (!name) return name;
+        let s = String(name);
+        s = s.replace(/\bNID\b/gi, 'National ID');
+        s = s.replace(/\bCR\b/gi, 'Civil Registration')
+        s = s.replace(/\bCIVILREG\b/gi, 'CR');
+        return s;
+    }
+
+    function formatCivilRegistrationLabel(label) {
+        if (!label) return label;
+        const raw = String(label).trim();
+        const normalized = raw.replace(/\s+/g, ' ').replace(/[-_]+/g, '-').trim();
+
+        const directMatch = normalized.match(/^(?:CR-)?(R(?:EG(?:ULAR)?)?|P(?:R(?:IORITY)?)?)-?(\d+)$/i);
+        if (directMatch) {
+            const typeSegment = directMatch[1] || '';
+            const ticketNumber = directMatch[2] || '';
+            const type = /^P/i.test(typeSegment) ? 'P' : 'R';
+            return `CIVILREG-${type}-${ticketNumber}`;
+        }
+
+        const expandedMatch = normalized.match(/^(?:Civil Registration\s*)?(Regular|Priority)-?(\d+)$/i);
+        if (expandedMatch) {
+            const type = /^Priority/i.test(expandedMatch[1]) ? 'P' : 'R';
+            const ticketNumber = expandedMatch[2] || '';
+            return `CIVILREG-${type}-${ticketNumber}`;
+        }
+
+        return raw;
+    }
+
+    function selectTargetDeviceVoice(localeCode) {
+        if (!('speechSynthesis' in window)) return null;
+        const systemVoices = window.speechSynthesis.getVoices();
+        let selectedVoice = systemVoices.find(v => v.lang === localeCode || v.lang.startsWith(localeCode.split('-')[0]));
+        if (!selectedVoice && localeCode === 'en-US') {
+            selectedVoice = systemVoices.find(v => v.lang.includes('PH') || v.name.toLowerCase().includes('philippines'));
+        }
+        return selectedVoice || systemVoices[0];
+    }
+
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => { selectTargetDeviceVoice(targetSystemLocale); };
+    }
+
+    function announceWindowOpen(windowName) {
+        if (!audioContextUnlocked) return;
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            windowName = normalizeWindowName(windowName);
+            const targetLocale = (windowName.toLowerCase().includes('priority')) ? 'en-US' : targetSystemLocale;
+            const phrase = targetLocale === 'fil-PH' ? `${windowName} ay bukas na, salamat po.` : `${windowName} is open, thank you.`;
+            const utterance = new SpeechSynthesisUtterance(phrase);
+            const voice = selectTargetDeviceVoice(targetLocale);
+            if (voice) utterance.voice = voice;
+            utterance.rate = targetLocale === 'en-US' ? 0.80 : 0.95;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function announceTicket(ticketNumber, windowName) {
+        if (!audioContextUnlocked) return;
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            windowName = normalizeWindowName(windowName);
+            const targetLocale = (windowName.toLowerCase().includes('priority')) ? 'en-US' : targetSystemLocale;
+            const phrase = buildLocalizedPhrase(ticketNumber, windowName, targetLocale);
+            const utterance = new SpeechSynthesisUtterance(phrase);
+            const voice = selectTargetDeviceVoice(targetLocale);
+            if (voice) utterance.voice = voice;
+            utterance.rate = targetLocale === 'en-US' ? 0.80 : 0.85;
+            currentlySpeakingTicket = ticketNumber;
+            utterance.onend = () => {
+                if (currentlySpeakingTicket === ticketNumber) currentlySpeakingTicket = null;
+            };
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function renderActiveWindows(users) {
+        activeWindows = {
+            national: { window1: false, window2: false, priorityWindow: false },
+            civil: { window1: false, window2: false }
+        };
+        (users || []).forEach(user => {
+            const location = (user.location || '').toLowerCase();
+            if (location.includes('national id')) {
+                if (location.includes('window 1')) activeWindows.national.window1 = true;
+                if (location.includes('window 2')) activeWindows.national.window2 = true;
+                if (location.includes('priority')) activeWindows.national.priorityWindow = true;
+            }
+            if (location.includes('civil registration')) {
+                if (location.includes('window 1')) activeWindows.civil.window1 = true;
+                if (location.includes('window 2')) activeWindows.civil.window2 = true;
+            }
+        });
+        renderQueueState(latestQueueState);
+    }
+
+    function updateNumber(id, val, windowName, isActive, cardId) {
+        const el = document.getElementById(id);
+        const card = document.getElementById(cardId);
+        const newVal = val ? val : (isActive ? '---' : 'CLOSED');
+        const oldVal = el.innerText.trim();
+        const wasClosed = oldVal === 'CLOSED';
+        const isClosed = newVal === 'CLOSED';
+        const isPlaceholder = newVal === '---';
+
+        if (!wasClosed && isClosed) {
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        }
+
+        if (oldVal !== newVal) {
+            if (card) {
+                card.classList.remove('closed');
+                if (isClosed) {
+                    card.classList.add('closing');
+                    if (card.dataset.closingTimer) {
+                        clearTimeout(Number(card.dataset.closingTimer));
+                    }
+                    const closeTimer = setTimeout(() => {
+                        card.classList.remove('closing');
+                        delete card.dataset.closingTimer;
+                    }, 2000);
+                    card.dataset.closingTimer = String(closeTimer);
+                } else {
+                    card.classList.remove('closing');
+                    if (card.dataset.closingTimer) {
+                        clearTimeout(Number(card.dataset.closingTimer));
+                        delete card.dataset.closingTimer;
+                    }
+                }
+            }
+            el.innerText = newVal;
+            if (isPlaceholder && wasClosed) {
+                announceWindowOpen(windowName);
+            } else if (!isPlaceholder && !isClosed) {
+                if (card) {
+                    card.classList.add('new-call');
+                    setTimeout(() => card.classList.remove('new-call'), 4000);
+                }
+                announceTicket(newVal, windowName);
+            }
+        }
+    }
+
+    function formatTimeRemaining(ms) {
+        if (ms <= 0) return 'Expired';
+        const totalSeconds = Math.floor(ms / 1000);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function renderWait(id, list, totalCount = 0) {
+        const container = document.getElementById(id);
+        if (!Array.isArray(list) || list.length === 0) {
+            container.innerHTML = '<div class="waiting-text">No pending tickets</div>';
+            return;
+        }
+        container.innerHTML = list.map(t => {
+            const label = id === 'wait-civ' ? formatCivilRegistrationLabel(t.label) : t.label;
+            return `
+                <div class="token-row ${t.isPriority ? 'priority' : ''}" role="listitem">
+                    <div class="token-label">${label}</div>
+                </div>
+            `;
+        }).join('');
+        if (totalCount > list.length) {
+            container.innerHTML += `
+                <div class="waiting-more-row" role="status">
+                    +${totalCount - list.length} more waiting
+                </div>`;
+        }
+    }
+
+    function renderRequeueList(id, list, totalCount = 0) {
+        const container = document.getElementById(id);
+        if (!Array.isArray(list) || list.length === 0) {
+            container.innerHTML = '<div class="waiting-text">No requeued tickets</div>';
+            return;
+        }
+        container.innerHTML = list.map(t => {
+            const label = id === 'requeue-civ' ? formatCivilRegistrationLabel(t.label) : t.label;
+            const remaining = formatTimeRemaining(600000 - (Date.now() - Number(t.requeueTime)));
+            return `
+                <div class="token-row ${t.isPriority ? 'priority' : ''}" role="listitem">
+                    <div class="token-label">${label}</div>
+                    <div class="token-timer" data-requeue-time="${t.requeueTime}">${remaining}</div>
+                </div>
+            `;
+        }).join('');
+        if (totalCount > list.length) {
+            container.innerHTML += `
+                <div class="waiting-more-row" role="status">
+                    +${totalCount - list.length} more waiting
+                </div>`;
+        }
+    }
+
+    function updateRequeueTimers() {
+        document.querySelectorAll('.token-timer[data-requeue-time]').forEach(el => {
+            const requeueTime = Number(el.dataset.requeueTime);
+            const remaining = formatTimeRemaining(600000 - (Date.now() - requeueTime));
+            el.innerText = remaining;
+        });
+    }
+
+    setInterval(updateRequeueTimers, 1000);
+
+    socket.on('queue_update', renderQueueState);
+    socket.on('active_users_list', renderActiveWindows);
+    socket.on('repeat_voice', (data) => {
+        if (data && data.ticketNumber) {
+            announceTicket(data.ticketNumber, data.windowName || 'Designated Window');
+        }
+    });
+    socket.on('connect', () => socket.emit('request_queue_update'));
+
+    updateTime();
+</script>
+</body>
+</html>

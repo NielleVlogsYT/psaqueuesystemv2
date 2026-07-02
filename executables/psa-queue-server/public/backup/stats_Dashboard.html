@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Queue System Statistics</title>
+        <link rel="icon" type="image/png" href="psa_logo.jpg">
+        <link rel="stylesheet" href="dash.css" />
+        <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet" />
+        <link rel="icon" type="image/png" href="./res/PSA.png">
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+        <style>
+            :root { --primary: #2e70ff; --bg-main: url('./res/Philippine-Statistics-Authority-PSA.png'); --sidebar-bg: #0c2d62; --text-muted: #64748b; --white: #ffffffe3; --shadow: 0 4px 12px rgba(0, 0, 0, 0.05); --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); --main_chart-color: rgba(255, 255, 255, 0.9); --primary-hover: #007acc; }
+            * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+            
+            body { background: #f4f7f6; color: #1f2a3a; min-height: 100vh; background: linear-gradient(135deg, rgba(1, 61, 129, 0.25), rgba(7, 112, 233, 0.25)), url('./res/Philippine-Statistics-Authority-PSA.png') center / cover fixed; }
+            body::before { content: ""; position: fixed; inset: 0; background: var(--bg-main); background-size: cover; filter: blur(15px); z-index: -2; opacity: 0.45;}
+             @media (prefers-reduced-motion: reduce) { body::before { animation: none; } }
+
+            /* --- Global Layout Wrapper --- */
+
+            .dashboard { display: flex; height: 100vh; overflow: hidden; position: relative; z-index: 1; }
+
+            /* --- Sidebar Navigation Menu Layout --- */
+
+            .sidebar { width: 60px; background: var(--sidebar-bg); display: flex; flex-direction: column; transition: var(--transition); padding: 1rem 0.35rem; z-index: 100;box-shadow: 2px 0 10px rgba(8, 36, 92, 0.1);}
+            .sidebar.expanded { width: 320px; }
+            
+            .sidebar-header { width: 100%; display: flex; align-items: center; }
+            .toggle-btn { display: flex; align-items: center; padding: 14px; cursor: pointer; color: white; font-size: 1.5rem; margin-bottom: 1.5rem;width: 100%;border-radius: 8px;transition: var(--transition);}
+            .toggle-btn:hover { background: rgba(255,255,255,0.1); }
+            .toggle-btn i { transition: none; }
+            
+            .menu-label { font-size: 1.1rem; font-weight: 700; margin-left: 15px; display: none; white-space: nowrap; opacity: 0; transform: translateX(-10px); transition: opacity 0.3s ease, transform 0.3s ease; }
+            .sidebar.expanded .menu-label { display: inline-block; opacity: 1; transform: translateX(0); }
+            .sidebar-menu { display: flex; flex-direction: column; height: 100%; gap: 10px; }
+            .sidebar-icon { display: flex; align-items: center; padding: 10px; border-radius: 8px; color: #cbd5e1; cursor: pointer; transition: var(--transition); text-decoration: none;position: relative;overflow: hidden;}
+            .sidebar-icon i { font-size: 1.5rem; min-width: 40px; display: flex; justify-content: left; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+            .nav-text { opacity: 0; display: none; white-space: nowrap; transform: translateX(-15px); transition: opacity 0.3s ease, transform 0.3s ease; font-weight: 500; }
+            .sidebar.expanded .nav-text { opacity: 1; display: inline-block; margin-left: 5px; transform: translateX(0); }
+            
+            /* Sidebar Item Hover Animations */
+
+            .sidebar-icon:hover { background: rgba(255, 255, 255, 0.1); color: #ffffff; padding-left: 14px; }
+            .sidebar-icon:hover i { transform: scale(1.15) translateX(2px); }
+            .sidebar-icon:focus-visible { outline: 2px solid #2e70ff; outline-offset: -2px; border-radius: 8px; }
+            
+            /* Active State Enhancements */
+
+            .sidebar-icon.active { background: var(--primary); color: #0c2d62; font-weight: 600; box-shadow: 0 4px 12px rgba(159, 212, 252, 0.3); animation: activePulse 2s infinite ease-in-out; }
+            .sidebar-icon.active i { transform: scale(1.05); color: #0c2d62; }
+            .sidebar-icon.active:hover { background: var(--primary); color: #0c2d62; padding-left: 10px; }
+            .sidebar-icon.active:hover i { transform: scale(1.05); }
+
+            @keyframes activePulse {
+                0% { box-shadow: 0 4px 12px rgba(159, 212, 252, 0.3); }
+                50% { box-shadow: 0 4px 20px rgba(159, 212, 252, 0.6); }
+                100% { box-shadow: 0 4px 12px rgba(159, 212, 252, 0.3); }
+            }
+
+            #btnReturnAdmin { background: #ef4444; color: #ffffff; }
+            #btnReturnAdmin:hover { background: #dc2626; }
+            
+            /* --- Content Layout Engine --- */
+
+            .main-content { flex: 1; overflow-y: auto; padding: 2rem; position: relative; }
+            .section { display: none; animation: fadeIn 0.4s ease-out; }
+            .section.active { display: block; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+            /* --- Header Configuration --- */
+
+            .dashboard-header {margin-bottom: 1.5rem;display: flex;justify-content: space-between;align-items: center;background: #134299; padding: 1.25rem 2rem;border-radius: 16px;backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); width: 100%; box-shadow: var(--shadow);}
+            .dashboard-header h1 { color: #ffffff; margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.5px; justify-content: left; display: flex; align-items: left; gap: 12px; }
+            .eyebrow { color: var(--primary); font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.75px; display: block; margin-bottom: 2px;  justify-content: left; display: flex; align-items: left; gap: 12px; }
+
+            /* --- Floating Structural Clock --- */
+
+            .home-dashboard-clock {display: flex; flex-direction: column; align-items: flex-end; justify-content: left; font-weight: 600;color: #1e293b;background: rgba(255, 255, 255, 0.9); border-radius: 14px; padding: 0.75rem 1.25rem; box-shadow: var(--shadow); }
+            .home-dashboard-clock .clock-display { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+            .home-dashboard-clock .date-display { font-size: 0.9rem; color: #64748b; font-weight: 500; }
+
+            /* --- Analytics Snap Cards --- */
+
+            .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+            .stat-card { background: var(--white); padding: 1.5rem;  border-radius: 14px;  box-shadow: var(--shadow); border-left: 6px solid #1aa2e0; transition: var(--transition); position: relative;}
+            .stat-card[onclick] { cursor: pointer; }
+            .stat-card:hover { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12); transform: translateY(-4px); border-left-color: var(--primary); }
+            .stat-card .label { color: #475569; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+            .stat-card h3 { margin: 0.25rem 0; font-size: 2.2rem; color: #0f172a; font-weight: 700; }
+            .trend { font-size: 0.85rem; font-weight: 500; color: #64748b; }
+
+            /* --- Graphics Components Space --- */
+
+            .main-chart-container { background: var(--main_chart-color); padding: 2.5rem; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 1.5rem; min-height: 340px; max-height: 500px; display: flex; flex-direction: column; }
+            .main-chart-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+            .main-chart-container h2 { font-size: 1.25rem; margin: 0; color: #0f172a; }
+            .main-chart-container canvas { flex-grow: 1; width: 100% !important; height: calc(100% - 40px) !important; }
+
+            .bottom-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-top: 1.5rem; width: 100%; }
+            .bottom-cards .card { background: var(--white); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); display: flex; flex-direction: column; height: 380px;  position: relative;}
+            .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+            .card-header h3 { margin: 0; font-size: 1.1rem; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+            .chart-export-btn { background: none; border: none; cursor: pointer; color: #2e70ff; font-size: 1.2rem; padding: 4px; border-radius: 6px; transition: var(--transition); display: flex; align-items: center; justify-content: center; }
+            .chart-export-btn:hover { background: rgba(46, 112, 255, 0.1); color: #0056b3; transform: scale(1.1); }
+            .chart-export-btn i { pointer-events: none; }
+            .chart-container.compact { flex-grow: 1; width: 100%; height: calc(100% - 40px); position: relative; }
+            .chart-container.compact canvas { width: 100% !important; height: 100% !important; }
+
+            /* --- Hero Landing Presenter --- */
+
+            .hero-card { background: var(--white); padding: 3.5rem 2rem; border-radius: 18px; box-shadow: var(--shadow); text-align: center; max-width: 650px; margin: 4rem auto; border: 1px solid rgba(255, 255, 255, 0.4);}
+            .hero-card h1 { margin-bottom: 0.5rem; font-size: 2.2rem; color: #0f172a; font-weight: 800; }
+            .hero-card p { margin-bottom: 2rem; color: #475569; font-size: 1.2rem; }
+            
+            .primary-btn { background: var(--primary); color: white; border: none; padding: 0.85rem 2rem; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: var(--transition); box-shadow: 0 4px 12px rgba(13, 109, 253, 0.738);}
+            .primary-btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(13, 109, 253, 0.697); }
+
+            /* --- Analytics Data Tables Grid View --- */
+
+            .summary-tables-container { display: flex; flex-direction: column; gap: 2rem; margin-top: 10px; }
+            .analytics-actions { display: flex; justify-content: flex-end; margin-bottom: -0.5rem; }
+            .service-summary-group { display: flex; flex-direction: column; gap: 1rem; }
+            
+            .summary-group-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; background: rgba(255,255,255,0.5); padding: 0.75rem 1rem; border-radius: 12px; }
+            .summary-group-header h3 { color: #0f172a; font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 8px; margin: 0; }
+            .summary-controls { display: flex; align-items: center; gap: 0.5rem; }
+            .summary-controls label { font-size: 0.85rem; color: #475569; font-weight: 600; }
+            
+            .summary-date-select { padding: 0.45rem 1rem; border-radius: 20px; border: 1px solid #cbd5e1; background: #ffffff; color: #0f172a; font-size: 0.85rem; font-weight: 500; outline: none;}
+
+            .tables-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.5rem; }
+            .table-card { background: #ffffff; border-radius: 14px; padding: 1.25rem; box-shadow: var(--shadow); border: 1px solid #f1f5f9; }
+            .table-card h4 { margin-bottom: 6px; color: #0f172a; font-size: 1rem; font-weight: 700; }
+            .table-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; color: #64748b; font-size: 0.8rem; }
+            
+            .summary-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+            .summary-table th, .summary-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+            .summary-table th { background-color: #f8fafc; color: #475569; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+            .summary-table td { color: #334155; font-weight: 500; }
+
+            /* Grid style for yearly attendance breakdown */
+            .stats-grid.dashboard-card-table table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; }
+            .stats-grid.dashboard-card-table th, .stats-grid.dashboard-card-table td { border: 1px solid #e2e8f0; padding: 8px; }
+            .stats-grid.dashboard-card-table th { background-color: #f8fafc; color: #475569; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+            .stats-grid.dashboard-card-table td { color: #334155; font-weight: 500; }
+            .stats-grid.dashboard-card-table th.numeric, .stats-grid.dashboard-card-table td.numeric { text-align: center; }
+            
+            .row-total { font-weight: 700; background-color: #f8fafc; }
+            .row-total td { border-bottom: 2px solid #cbd5e1; color: #0f172a !important; font-weight: 700; }
+            .btn-graph-link { border: 1px solid rgba(13, 110, 253, 0.2); background: #eff6ff; color: var(--primary); padding: 5px 12px;  border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.75rem; transition: var(--transition);}
+            .btn-graph-link:hover { background: var(--primary); color: white; }
+            .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+            .status-dot.waiting { background-color: #eab308; }
+            .status-dot.serving { background-color: #3b82f6; }
+            .status-dot.completed { background-color: #22c55e; }
+            .status-dot.terminated { background-color: #ef4444; }
+
+            /* --- Stream Timeout / Stale State Styles --- */
+            .stale-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 600; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 20px; padding: 2px 9px; margin-left: 6px; vertical-align: middle; animation: stalePulse 2.5s ease-in-out infinite; }
+            .stale-badge::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
+            @keyframes stalePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
+            .stream-error { color: #94a3b8 !important; font-style: italic; }
+            .stat-card.stale { border-left-color: #f59e0b !important; }
+            .stat-card.stale h3 { color: #78716c; }
+
+            /* --- Modals --- */
+
+            .modal-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 9999; padding: 1.5rem;}
+            .modal-overlay.open { display: flex;  }
+            .modal-card { background: #ffffff; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); padding: 1.5rem; text-align: left; border: 1px solid #f1f5f9;}
+            .modal-header { display: flex; align-items: center; justify-content: space-between; }
+            .modal-title { margin: 0; font-size: 1.2rem; font-weight: 700; color: #0f172a; }
+            .modal-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: #94a3b8; }
+            .modal-body { margin-top: 1rem; color: #475569; font-size: 0.95rem; line-height: 1.5; }
+            .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+            .modal-btn { padding: 0.55rem 1.25rem; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: var(--transition); }
+            .btn-cancel { background: #f1f5f9; color: #475569; }
+            .btn-cancel:hover { background: #e2e8f0; }
+            .btn-confirm { background: var(--primary); color: #ffffff; }
+            .btn-confirm:hover { background: var(--primary-hover); }
+
+            /* --- Dashboard Customization --- */
+
+            .dashboard-card { background: var(--white); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid #f1f5f9; display: flex; flex-direction: column; }    
+            .dashboard-overlay { background: var(--white); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid #f1f5f9; display: flex; flex-direction: column; position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px; z-index: 10; opacity: 0.95; backdrop-filter: blur(8px); }
+            .dashboard-card-table { background: var(--white); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid #f1f5f9; display: flex; flex-direction: column; }    
+
+            /* --- Responsive Queries --- */
+            
+            @media (max-width: 1100px) { .bottom-cards { grid-template-columns: 1fr; } .bottom-cards .card { height: 360px; }}
+            @media (max-width: 768px) {
+                .sidebar.expanded { width: 70px; }
+                .sidebar.expanded .nav-text { display: none; }
+                .sidebar.expanded .menu-label { display: none; }
+                .dashboard-header { flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1rem; }
+                .home-dashboard-clock { width: 100%; align-items: flex-start; }
+                .main-content { padding: 1rem; }
+                .hero-card { padding: 2rem 1rem; margin: 2rem auto; }
+                .tables-grid { grid-template-columns: 1fr; }
+            }
+
+        </style>
+
+    </head>
+    
+    <body>
+        <div class="dashboard">
+            <nav class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="toggle-btn" id="toggleBtn">
+                        <i class="bx bx-menu"></i>
+                        <span class="menu-label">PSA Statistics</span>
+                    </div> 
+                </div>
+
+                <div class="sidebar-menu">
+                    <div class="sidebar-icon" data-section="dashboard" tabindex="0" role="button" aria-label="General Dashboard">
+                        <i class="bx bx-grid-alt"></i>
+                        <span class="nav-text">General Dashboard</span>
+                    </div>
+                    <div class="sidebar-icon" data-section="natid" tabindex="0" role="button" aria-label="National ID / Philsys Analytics">
+                        <i class="bx bx-id-card"></i>
+                        <span class="nav-text">National ID / Philsys</span>
+                    </div>
+                    <div class="sidebar-icon" data-section="civil" tabindex="0" role="button" aria-label="Civil Registration Analytics">
+                        <i class="bx bx-file-blank"></i>
+                        <span class="nav-text">Civil Registration</span>
+                    </div>
+                    <div class="sidebar-icon" data-section="analyticsNID" id="NID-TableLink" tabindex="0" role="button" aria-label="National ID Tabled Summary">
+                        <i class="bx bx-bar-chart"></i>
+                        <span class="nav-text">National ID Tabled Summary</span>
+                    </div>
+
+                    <div class="sidebar-icon" data-section="analyticsCIV" id="CIV-TableLink" tabindex="0" role="button" aria-label="Civil Registration Tabled Summary">
+                        <i class="bx bx-table"></i>
+                        <span class="nav-text">Civil Registration Tabled Summary</span>
+                    </div>
+
+                    <div class="sidebar-icon" id="btnReturnAdmin" tabindex="0" role="button" aria-label="Return to Administration" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 15px;">
+                        <i class="bx bx-arrow-back"></i>
+                        <span class="nav-text">Return to Admin</span>
+                    </div>
+                </div>
+            </nav>
+
+            <main class="main-content">
+                <section id="dashboardSection" class="section active">
+                    <header class="dashboard-header current-section">
+                        <div>
+                            <span class="eyebrow">PSA Realtime Analytics</span>
+                            <h1>Queue Ticket Statistics Dashboard</h1>
+                        </div>
+                        <div class="home-dashboard-clock">
+                            <div class="clock-display" id="realtime-clock-dash">00:00:00 PM</div>
+                            <div class="date-display" id="realtime-date-dash">Loading...</div>
+                        </div>
+                    </header>
+
+
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="label">Total Attendance Today</span>
+                            <h3 id="total-attendance-count">0</h3>
+                            <span class="trend" id="total-attendance-timestamp">Synchronizing stream...</span>
+                        </div>
+                        <div class="stat-card" onclick="switchSection('natid')">
+                            <span class="label">National ID Transactions</span>
+                            <h3 id="national-transactions-count">0</h3>
+                            <span class="trend" id="national-transactions-timestamp">Synchronizing stream...</span>
+                        </div>
+                        <div class="stat-card" onclick="switchSection('civil')">
+                            <span class="label">Civil Registration Units</span>
+                            <h3 id="civil-transactions-count">0</h3>
+                            <span class="trend" id="civil-transactions-timestamp">Synchronizing stream...</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="main-chart-container">
+                            <div class="main-chart-header">
+                                <h2>Yearly Client Attendance Rate Summary Timeline <span class="chart-year">2026</span></h2>
+                                <span class="trend chart-timestamp" id="mainchart-timestamp">Synchronizing stream...</span>
+                            </div>
+                            <canvas id="mainChart"></canvas>
+                        </div>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <span class="label">Total Yearly Transactions</span>
+                                <h3 id="summary-attendance-count">0</h3>
+                                <span class="trend" id="summary-attendance-timestamp">Synchronizing stream...</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="label">Highest Peak Month</span>
+                                <h3 id="highest-peak-month">0</h3>
+                                <span class="trend" id="summary-transactions-timestamp">Synchronizing stream...</span>
+                            </div>
+                        </div>
+
+
+                        <div class="stats-grid dashboard-card-table">
+                            <header class="card-header">
+                                <h3><i class='bx bx-table'></i> Yearly Service Attendance Breakdown</h3>
+                                <span class="trend" id="attendance-breakdown-timestamp">Synchronizing stream...</span>
+                            </header>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>Months</th>
+                                        <th class="numeric">National ID / Philsys</th>
+                                        <th class="numeric">Civil Registration</th>
+                                        <th class="numeric">Sub Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="natidSection" class="section">
+                    <header class="dashboard-header">
+                        <div>
+                            <span class="eyebrow">PSA - National ID Registry</span>
+                            <h1>Philsys Analytics</h1>
+                        </div>
+                        <div class="home-dashboard-clock">
+                            <div class="clock-display" id="realtime-clock-nat">00:00:00 PM</div>
+                            <div class="date-display" id="realtime-date-nat">Loading...</div>
+                        </div>
+                    </header>
+
+                    <div class="bottom-cards">
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-user-voice'></i> Daily Client Category Processing</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('orderChart', 'NID_Daily_Category')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend nid-category-timestamp">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="orderChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-pie-chart-alt-2'></i>Daily Ticket Status Metric Breakdown</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('ticketStatusChart', 'NID_Daily_Status')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend nid-status-timestamp">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="ticketStatusChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-user-voice'></i>Weekly Client Category Processing</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('orderChartWeekly', 'NID_Weekly_Category')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend nid-category-timestamp">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="orderChartWeekly"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-pie-chart-alt-2'></i>Weekly Ticket Status Metric Breakdown</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('ticketStatusChartWeekly', 'NID_Weekly_Status')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend nid-status-timestamp">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="ticketStatusChartWeekly"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-user-voice'></i>Monthly Client Category Processing</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('orderChartMonthly', 'NID_Monthly_Category')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend nid-category-timestamp">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="orderChartMonthly"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-pie-chart-alt-2'></i> Monthly Ticket Status Metric Breakdown</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('ticketStatusChartMonthly', 'NID_Monthly_Status')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend nid-status-timestamp">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="ticketStatusChartMonthly"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <section id="civilSection" class="section">
+                    <header class="dashboard-header">
+                        <div>
+                            <span class="eyebrow">PSA - Civil Registration</span>
+                            <h1>Civil Registration Analytics</h1>
+                        </div>
+                        <div class="home-dashboard-clock">
+                            <div class="clock-display" id="realtime-clock-civil">00:00:00 PM</div>
+                            <div class="date-display" id="realtime-date-civil">Loading...</div>
+                        </div>
+                    </header>
+
+                    <div class="bottom-cards">
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-user-voice'></i> Daily Client Category Processing</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('civilOrderChart', 'CIV_Daily_Category')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend civil-category-timestamp" id="civil-category-timestamp-daily">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="civilOrderChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-pie-chart-alt-2'></i>Daily Ticket Status Metric Breakdown</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('civilEarningsChart', 'CIV_Daily_Status')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend civil-status-timestamp" id="civil-status-timestamp-daily">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="civilEarningsChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-user-voice'></i>Weekly Client Category Processing</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('civilOrderChartWeekly', 'CIV_Weekly_Category')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend civil-category-timestamp" id="civil-category-timestamp-weekly">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="civilOrderChartWeekly"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-pie-chart-alt-2'></i>Weekly Ticket Status Metric Breakdown</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('civilEarningsChartWeekly', 'CIV_Weekly_Status')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend civil-status-timestamp" id="civil-status-timestamp-weekly">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="civilEarningsChartWeekly"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-user-voice'></i>Monthly Client Category Processing</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('civilOrderChartMonthly', 'CIV_Monthly_Category')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend civil-category-timestamp" id="civil-category-timestamp-monthly">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact">
+                                <canvas id="civilOrderChartMonthly"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class='bx bx-pie-chart-alt-2'></i> Monthly Ticket Status Metric Breakdown</h3>
+                                <button class="chart-export-btn" onclick="exportChartPNG('civilEarningsChartMonthly', 'CIV_Monthly_Status')" title="Download chart as PNG">
+                                    <i class='bx bx-download'></i>
+                                </button>
+                                <span class="trend civil-status-timestamp" id="civil-status-timestamp-monthly">Synchronizing...</span>                        
+                            </div>
+                            <div class="chart-container compact" style="position: center; align-items: center; justify-content: center;">
+                                <canvas id="civilEarningsChartMonthly"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        <div id="return-confirm-modal" class="modal-overlay" aria-hidden="true">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="return-modal-title">
+                <div class="modal-header">
+                    <h2 id="return-modal-title" class="modal-title">Return to Master Administration View</h2>
+                    <button class="modal-close" aria-label="Close Modal" onclick="document.getElementById('return-confirm-modal').classList.remove('open')">✕</button>
+                </div>
+                <div class="modal-body">Are you certain you want to exit the live monitoring screen statistics node? Your connection parameters to the data streaming pipelines will close safely.</div>
+                <div class="modal-actions">
+                    <button id="return-cancel-btn" class="modal-btn btn-cancel">Cancel and Remain</button>
+                    <button id="return-confirm-btn" class="modal-btn btn-confirm">Confirm Exit</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            
+            let selectedDepartmentId = '';
+            document.getElementById('NID-TableLink').addEventListener('click', function() {
+                window.location.href = './Stats_Dashboard/NID_TAbledSummary.html';
+            });
+
+            document.getElementById('CIV-TableLink').addEventListener('click', function() {
+                window.location.href = './Stats_Dashboard/CR_TAbledSummary.html';
+            });
+
+            window.socket = typeof io !== 'undefined' ? io() : { on: (event, callback) => { console.warn(`Socket server client missing offline mode active for target event handler: ${event}`); } };
+
+            (function() {
+                const STREAM_TIMEOUT_MS = 8000;
+                window._streamDataReceived = false;
+
+                const SYNC_TIMESTAMP_IDS = [
+                    'total-attendance-timestamp',
+                    'national-transactions-timestamp',
+                    'civil-transactions-timestamp',
+                    'mainchart-timestamp',
+                    'summary-attendance-timestamp',
+                    'summary-transactions-timestamp',
+                    'attendance-breakdown-timestamp',
+                ];
+                const SYNC_TIMESTAMP_CLASSES = [
+                    'nid-category-timestamp',
+                    'nid-status-timestamp',
+                    'civil-category-timestamp',
+                    'civil-status-timestamp',
+                ];
+                const STAT_CARD_COUNT_IDS = [
+                    'total-attendance-count',
+                    'national-transactions-count',
+                    'civil-transactions-count',
+                    'summary-attendance-count',
+                    'highest-peak-month',
+                ];
+
+                function getSyncEls() {
+                    const els = [];
+                    SYNC_TIMESTAMP_IDS.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) els.push(el);
+                    });
+                    SYNC_TIMESTAMP_CLASSES.forEach(cls => {
+                        document.querySelectorAll('.' + cls).forEach(el => els.push(el));
+                    });
+                    return els;
+                }
+
+                function isStillSyncing(el) {
+                    return el.textContent.trim().startsWith('Synchronizing');
+                }
+
+                function markStale() {
+                    const staleEls = getSyncEls().filter(isStillSyncing);
+                    if (staleEls.length === 0) return; // Data already arrived — nothing to do
+
+                    staleEls.forEach(el => {
+                        el.classList.add('stream-error');
+                        el.textContent = 'No data available';
+                        if (!el.nextElementSibling || !el.nextElementSibling.classList.contains('stale-badge')) {
+                            const badge = document.createElement('span');
+                            badge.className = 'stale-badge';
+                            badge.title = 'Live data stream could not be reached. Data may be unavailable or the server is offline.';
+                            badge.textContent = 'Offline';
+                            el.insertAdjacentElement('afterend', badge);
+                        }
+                    });
+
+                    STAT_CARD_COUNT_IDS.forEach(id => {
+                        const countEl = document.getElementById(id);
+                        if (countEl) {
+                            const card = countEl.closest('.stat-card');
+                            if (card) card.classList.add('stale');
+                        }
+                    });
+                }
+
+                window._clearStaleState = function() {
+                    window._streamDataReceived = true;
+                    document.querySelectorAll('.stale-badge').forEach(b => b.remove());
+                    document.querySelectorAll('.stream-error').forEach(el => el.classList.remove('stream-error'));
+                    document.querySelectorAll('.stat-card.stale').forEach(card => card.classList.remove('stale'));
+                };
+
+                window._streamTimeoutHandle = setTimeout(function() {
+                    if (!window._streamDataReceived) {
+                        markStale();
+                    }
+                }, STREAM_TIMEOUT_MS);
+            })();
+
+            function runGlobalClockTick() {
+                const timeZoneStringOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+                const dateLongFormOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const timestampNow = new Date();
+                
+                const timeStringString = timestampNow.toLocaleTimeString(undefined, timeZoneStringOptions);
+                const dateStringString = timestampNow.toLocaleDateString(undefined, dateLongFormOptions);
+
+                const targetsTimeArray = ['realtime-clock-home', 'realtime-clock-dash', 'realtime-clock-nat', 'realtime-clock-civil', 'realtime-clock-anal'];
+                const targetsDateArray = ['realtime-date-home', 'realtime-date-dash', 'realtime-date-nat', 'realtime-date-civil', 'realtime-date-anal'];
+
+                targetsTimeArray.forEach(id => { const el = document.getElementById(id); if(el) el.innerText = timeStringString; });
+                targetsDateArray.forEach(id => { const el = document.getElementById(id); if(el) el.innerText = dateStringString; });
+            }
+            setInterval(runGlobalClockTick, 1000);
+            runGlobalClockTick();
+
+            if(typeof ChartDataLabels !== 'undefined') {
+                Chart.register(ChartDataLabels);
+            }
+            
+            document.addEventListener("DOMContentLoaded", () => {
+                // --- 1. SIDEBAR NAVIGATION CONTROLS ---
+                const sidebar = document.getElementById("sidebar");
+                const toggleBtn = document.getElementById("toggleBtn");
+
+                if (toggleBtn && sidebar) {
+                    const toggleIcon = toggleBtn.querySelector("i");
+                    toggleBtn.addEventListener("click", () => {
+                        sidebar.classList.toggle("expanded");
+                        if (toggleIcon) {
+                            toggleIcon.classList.toggle("bx-menu");
+                            toggleIcon.classList.toggle("bx-menu-alt-right");
+                        }
+                    });
+                }
+
+                const sidebarIcons = document.querySelectorAll(".sidebar-icon");
+
+                sidebarIcons.forEach(icon => {
+                    icon.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            icon.click();
+                        }
+                    });
+                });
+                const sections = document.querySelectorAll(".section");
+
+                const switchSection = (sectionName) => {
+                    sidebarIcons.forEach(i => {
+                        i.classList.remove("active");
+                        if (i.dataset.section === sectionName) i.classList.add("active");
+                    });
+
+                    sections.forEach(s => s.classList.remove("active"));
+                    const target = document.getElementById(`${sectionName}Section`);
+                    if (target) target.classList.add("active");
+
+                    if (sidebar && sidebar.classList.contains("expanded") && window.innerWidth < 768) {
+                        sidebar.classList.remove("expanded");
+                    }
+                };
+
+                sidebarIcons.forEach(icon => {
+                    if (icon.dataset.section) {
+                        icon.addEventListener("click", () => switchSection(icon.dataset.section));
+                    }
+                });
+                const heroBtn = document.getElementById("goToDashboardBtn");
+                if (heroBtn) {
+                    heroBtn.addEventListener("click", () => switchSection("dashboard"));
+                }
+
+                // --- 2. MODAL DIALOGS AND LOGOUT HANDLERS ---
+                const returnBtn = document.getElementById("btnReturnAdmin");
+                const returnConfirmModal = document.getElementById('return-confirm-modal');
+                const returnConfirmBtn = document.getElementById('return-confirm-btn');
+                const returnCancelBtn = document.getElementById('return-cancel-btn');
+
+                if (returnBtn && returnConfirmModal) {
+                    returnBtn.addEventListener("click", () => returnConfirmModal.classList.add('open'));
+                }
+                if (returnCancelBtn && returnConfirmModal) {
+                    returnCancelBtn.addEventListener('click', () => returnConfirmModal.classList.remove('open'));
+                }
+                if (returnConfirmBtn) {
+                    returnConfirmBtn.addEventListener('click', () => { window.location.href = "admin_dashboard.html"; });
+                }
+
+                // --- 3. CHART METRICS INSTANTIATIONS ---
+                const getMonthLabels = () => [
+                    'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                ];
+
+                const normalizeChartData = (data, length) => {
+                    const normalized = Array(length).fill(0);
+                    if (!Array.isArray(data)) return normalized;
+                    for (let i = 0; i < length; i++) {
+                        normalized[i] = Number(data[i]) || 0;
+                    }
+                    return normalized;
+                };
+
+                const populateYearlyAttendanceTable = (nationalData, civilData, labels) => {
+                    const body = document.getElementById('attendanceTableBody');
+                    if (!body) return;
+
+                    const dotClasses = ['waiting', 'serving', 'completed', 'terminated'];
+                    let totalNational = 0;
+                    let totalCivil = 0;
+
+                    const rows = labels.map((label, index) => {
+                        const national = Number(nationalData[index] || 0);
+                        const civil = Number(civilData[index] || 0);
+                        totalNational += national;
+                        totalCivil += civil;
+                        const subtotal = national + civil;
+                        const dotClass = dotClasses[index % dotClasses.length];
+                        return `
+                            <tr>
+                                <td><span class="status-dot ${dotClass}"></span> ${label}</td>
+                                <td class="numeric">${national}</td>
+                                <td class="numeric">${civil}</td>
+                                <td class="numeric">${subtotal}</td>
+                            </tr>`;
+                    });
+
+                    rows.push(`
+                        <tr class="row-total">
+                            <td>Total Yearly Tickets Issued</td>
+                            <td class="numeric">${totalNational}</td>
+                            <td class="numeric">${totalCivil}</td>
+                            <td class="numeric">${totalNational + totalCivil}</td>
+                        </tr>`);
+
+                    body.innerHTML = rows.join('');
+                };
+
+                const aggregateMonthlyTicketsFromLogs = (logs, departmentKey) => {
+                    const counts = Array(12).fill(0);
+                    const currentYear = new Date().getFullYear();
+                    logs.forEach(entry => {
+                        const dept = entry.department?.toString().toLowerCase() || '';
+                        if (!dept.includes(departmentKey)) return;
+                        if ((entry.action || '').toString().toUpperCase() !== 'ISSUED') return;
+                        const iso = getTicketDateISO(entry);
+                        if (!iso) return;
+                        const entryDate = new Date(iso);
+                        if (entryDate.getFullYear() !== currentYear) return;
+                        const monthIndex = entryDate.getMonth();
+                        if (monthIndex >= 0 && monthIndex < 12) counts[monthIndex]++;
+                    });
+                    return counts;
+                };
+
+                const ctxMain = document.getElementById("mainChart");
+                let mainChart = null;
+                if (ctxMain) {
+                    const monthLabels = getMonthLabels();
+                    mainChart = new Chart(ctxMain.getContext("2d"), {
+                        type: "line",
+                        data: {
+                            labels: monthLabels,
+                            datasets: [
+                                { label: "National ID Service Desk", data: Array(monthLabels.length).fill(0), borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.05)", tension: 0.35, fill: true },
+                                { label: "Civil Registration Registry", data: Array(monthLabels.length).fill(0), borderColor: "#f59e0b", backgroundColor: "rgba(245, 158, 11, 0.05)", tension: 0.35, fill: true }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { ticks: { font: { size: 12, weight: '500' } }, grid: { display: false } },
+                                y: { ticks: { font: { size: 12 } }, beginAtZero: true }
+                            },
+                            plugins: { datalabels: { display: false }, legend: { labels: { font: { family: "'Inter', sans-serif", weight: '600' } } } }
+                        }
+                    });
+                }
+
+                // National ID Service Desk - Daily Client Category Breakdown & Ticket Status Distribution Charts
+                const ctxOrder = document.getElementById("orderChart");
+                let orderChart = null; 
+                if (ctxOrder) {
+                    orderChart = new Chart(ctxOrder.getContext("2d"), {
+                        type: "bar",
+                        data: {
+                            labels: ["Regular Tickets", "Priority Tickets"],
+                            datasets: [{ label: "Tickets Issued Count", data: [0, 0], backgroundColor: ["#0d6efd", "#64748b"], borderRadius: 6 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { ticks: { font: { size: 12, weight: '600' } } },
+                                y: { beginAtZero: true }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                datalabels: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                const statusCtx = document.getElementById('ticketStatusChart');
+                let myStatusChart = null;
+                 if (statusCtx) {
+                    myStatusChart = new Chart(statusCtx.getContext("2d"), {
+                        type: 'pie',
+                        data: {
+                            labels: ['Terminated', 'Completed', 'Requeued'], 
+                            datasets: [{
+                                data: [0, 0, 0], 
+                                backgroundColor: ['#ef4444', '#22c55e', '#f59e0b'],
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' }, padding: 12 } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+
+
+                const ctxOrderWeekly = document.getElementById("orderChartWeekly");
+                let orderChartWeekly = null; 
+                if (ctxOrderWeekly) {
+                    orderChartWeekly = new Chart(ctxOrderWeekly.getContext("2d"), {
+                        type: "bar",
+                        data: {
+                            labels: ["Regular Tickets", "Priority Tickets"],
+                            datasets: [{ label: "Tickets Issued Count", data: [0, 0], backgroundColor: ["#0d6efd", "#64748b"], borderRadius: 6 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { ticks: { font: { size: 12, weight: '600' } } },
+                                y: { beginAtZero: true }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                datalabels: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                const statusCtxWeekly = document.getElementById('ticketStatusChartWeekly');
+                let myStatusChartWeekly = null;
+                 if (statusCtxWeekly) {
+                    myStatusChartWeekly = new Chart(statusCtxWeekly.getContext("2d"), {
+                        type: 'pie',
+                        data: {
+                            labels: ['Terminated', 'Completed', 'Requeued'], 
+                            datasets: [{
+                                data: [0, 0, 0], 
+                                backgroundColor: ['#ef4444', '#22c55e', '#f59e0b'],
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' }, padding: 12 } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+
+
+                const ctxOrderMonthly = document.getElementById("orderChartMonthly");
+                let orderChartMonthly = null; 
+                if (ctxOrderMonthly) {
+                    orderChartMonthly = new Chart(ctxOrderMonthly.getContext("2d"), {
+                        type: "bar",
+                        data: {
+                            labels: ["Regular Tickets", "Priority Tickets"],
+                            datasets: [{ label: "Tickets Issued Count", data: [0, 0], backgroundColor: ["#0d6efd", "#64748b"], borderRadius: 6 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { ticks: { font: { size: 12, weight: '600' } } },
+                                y: { beginAtZero: true }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                datalabels: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                const statusCtxMonthly = document.getElementById('ticketStatusChartMonthly');
+                let myStatusChartMonthly = null;
+                 if (statusCtxMonthly) {
+                    myStatusChartMonthly = new Chart(statusCtxMonthly.getContext("2d"), {
+                        type: 'pie',
+                        data: {
+                            labels: ['Terminated', 'Completed', 'Requeued'], 
+                            datasets: [{
+                                data: [0, 0, 0], 
+                                backgroundColor: ['#ef4444', '#22c55e', '#f59e0b'],
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' }, padding: 12 } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+
+
+                // --- Civil Registry Charts ---
+                const ctxCivilOrder = document.getElementById("civilOrderChart");
+                let civilOrderChart = null;
+                if (ctxCivilOrder) {
+                    civilOrderChart = new Chart(ctxCivilOrder.getContext("2d"), {
+                        type: "doughnut",
+                        data: {
+                            labels: ["Regular", "Priority"],
+                            datasets: [{ data: [0, 0], backgroundColor: ["#0d6efd", "#64748b"], borderWidth: 2 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' } } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                const ctxCivilEarnings = document.getElementById("civilEarningsChart");
+                let civilEarningsChart = null;
+                if (ctxCivilEarnings) {
+                    civilEarningsChart = new Chart(ctxCivilEarnings.getContext("2d"), {
+                        type: "doughnut",
+                        data: {
+                            labels: ["Completed", "Terminated", "Requeued"],
+                            datasets: [{ data: [0, 0, 0], backgroundColor: ["#22c55e", "#ef4444", "#f59e0b"], borderWidth: 2 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' } } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+
+                const ctxCivilOrderWeekly = document.getElementById("civilOrderChartWeekly");
+                let civilOrderChartWeekly = null;
+                if (ctxCivilOrderWeekly) {
+                    civilOrderChartWeekly = new Chart(ctxCivilOrderWeekly.getContext("2d"), {
+                        type: "doughnut",
+                        data: {
+                            labels: ["Regular", "Priority"],
+                            datasets: [{ data: [0, 0], backgroundColor: ["#0d6efd", "#64748b"], borderWidth: 2 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' } } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                const ctxCivilEarningsWeekly = document.getElementById("civilEarningsChartWeekly");
+                let civilEarningsChartWeekly = null;
+                if (ctxCivilEarningsWeekly) {
+                    civilEarningsChartWeekly = new Chart(ctxCivilEarningsWeekly.getContext("2d"), {
+                        type: "doughnut",
+                        data: {
+                            labels: ["Completed", "Terminated", "Requeued"],
+                            datasets: [{ data: [0, 0, 0], backgroundColor: ["#22c55e", "#ef4444", "#f59e0b"], borderWidth: 2 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' } } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+
+
+                const ctxCivilOrderMonthly = document.getElementById("civilOrderChartMonthly");
+                let civilOrderChartMonthly = null;
+                if (ctxCivilOrderMonthly) {
+                    civilOrderChartMonthly = new Chart(ctxCivilOrderMonthly.getContext("2d"), {
+                        type: "doughnut",
+                        data: {
+                            labels: ["Regular", "Priority"],
+                            datasets: [{ data: [0, 0], backgroundColor: ["#0d6efd", "#64748b"], borderWidth: 2 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' } } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                const ctxCivilEarningsMonthly = document.getElementById("civilEarningsChartMonthly");
+                let civilEarningsChartMonthly = null;
+                if (ctxCivilEarningsMonthly) {
+                    civilEarningsChartMonthly = new Chart(ctxCivilEarningsMonthly.getContext("2d"), {
+                        type: "doughnut",
+                        data: {
+                            labels: ["Completed", "Terminated", "Requeued"],
+                            datasets: [{ data: [0, 0, 0], backgroundColor: ["#22c55e", "#ef4444", "#f59e0b"], borderWidth: 2 }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { font: { size: 11, weight: '600' } } },
+                                datalabels: {
+                                    color: '#ffffff',
+                                    formatter: function(value, ctx) {
+                                        const data = ctx.chart.data.datasets[0].data || [];
+                                        const sum = data.reduce((a, b) => a + b, 0);
+                                        return sum ? ((value / sum * 100).toFixed(1) + '%') : '0%';
+                                    },
+                                    font: { weight: '700', size: 12 }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.raw;
+                                            const data = context.dataset.data || [];
+                                            const sum = data.reduce((a, b) => a + b, 0);
+                                            const pct = sum ? ((value / sum * 100).toFixed(1)) : '0';
+                                            return context.label + ': ' + value + ' (' + pct + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+
+                // --- 4. DATA SYNCHRONIZATION DATAFLOW PIPELINE ---
+                const syncDatabaseMetrics = async () => {
+                    try {
+                        const now = new Date();
+                        const todayKey = now.toISOString().slice(0, 10);
+                        const formattedDate = now.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+                        const formattedTime = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+                        const dynamicTimestamp = `as of ${formattedDate} ${formattedTime}`;
+
+                        // Update UI Snapshot Fields
+                        const dailyRes = await fetch('/api/daily-transactions');
+                        const dailyData = await dailyRes.json();
+
+
+
+                        if (dailyData.success) {
+                            const totalEl = document.getElementById('total-attendance-count');
+                            const nationalEl = document.getElementById('national-transactions-count');
+                            const civilEl = document.getElementById('civil-transactions-count');
+
+
+                            if (totalEl) totalEl.textContent = dailyData.total || 0;
+                            if (nationalEl) nationalEl.textContent = dailyData.national || 0;
+                            if (civilEl) civilEl.textContent = dailyData.civil || 0;
+
+                            ['summary-attendance-timestamp', 'summary-transactions-timestamp','total-attendance-timestamp', 'national-transactions-timestamp', 'civil-transactions-timestamp'].forEach(id => {
+                                const el = document.getElementById(id); if (el) el.textContent = dynamicTimestamp;
+                            });
+                        }
+
+                        if (typeof window._clearStaleState === 'function') window._clearStaleState();
+
+                        const nationalIdCategoriesRes = await fetch(`/api/national-id-ticket-categories?date=${todayKey}`);
+                        const nationalIdCategoriesData = await nationalIdCategoriesRes.json();
+                            if (nationalIdCategoriesData.success && orderChart) {
+                            orderChart.data.datasets[0].data = [nationalIdCategoriesData.regular, nationalIdCategoriesData.priority];
+                            orderChart.update();
+                            document.querySelectorAll('.nid-category-timestamp').forEach(el => el.textContent = dynamicTimestamp);
+                        }
+
+                        const nationalIdStatusRes = await fetch(`/api/national-id-ticket-status-summary?date=${todayKey}`);
+                        const nationalIdStatusData = await nationalIdStatusRes.json();
+                        if (nationalIdStatusData.success && myStatusChart) {
+                            myStatusChart.data.datasets[0].data = [
+                                nationalIdStatusData.terminated || 0, 
+                                nationalIdStatusData.completed || 0, 
+                                nationalIdStatusData.requeued || 0
+                            ];
+                            myStatusChart.update();
+                            document.querySelectorAll('.nid-status-timestamp').forEach(el => el.textContent = dynamicTimestamp);
+                        }
+
+                        const civilIdCategoriesRes = await fetch(`/api/civil-registration-ticket-categories?date=${todayKey}`);
+                        const civilIdCategoriesData = await civilIdCategoriesRes.json();
+                        if (civilIdCategoriesData.success && civilOrderChart) {
+                            civilOrderChart.data.datasets[0].data = [civilIdCategoriesData.regular, civilIdCategoriesData.priority];
+                            civilOrderChart.update();
+                            document.querySelectorAll('.civil-category-timestamp').forEach(el => el.textContent = dynamicTimestamp);
+                        }
+
+                        const civilStatusRes = await fetch(`/api/civil-registration-ticket-status-summary?date=${todayKey}`);
+                        const civilStatusData = await civilStatusRes.json();
+                        if (civilStatusData.success && civilEarningsChart) {
+                            civilEarningsChart.data.datasets[0].data = [civilStatusData.completed || 0, civilStatusData.terminated || 0, civilStatusData.requeued || 0];
+                            civilEarningsChart.update();
+                            document.querySelectorAll('.civil-status-timestamp').forEach(el => el.textContent = dynamicTimestamp);
+                        }
+
+                        const logsRes = await fetch('/api/system-logs/ticket_logs');
+                    const logsData = await logsRes.json();
+                    const allLogs = logsData.success && Array.isArray(logsData.logs) ? logsData.logs : [];
+                    
+                    // Deduplicate logs to prevent double-counting
+                    const deduplicatedLogs = (() => {
+                        const seen = new Set();
+                        const deduplicated = [];
+                        allLogs.forEach(log => {
+                            const key = `${log.iso_timestamp || ''}|${log.label || ''}|${log.department || ''}`;
+                            if (!seen.has(key)) {
+                                seen.add(key);
+                                deduplicated.push(log);
+                            }
+                        });
+                        return deduplicated;
+                    })();
+                    
+                    if (deduplicatedLogs.length > 0) {
+                        populateSummaryDateSelectors(deduplicatedLogs);
+                        updateTableSummaries(deduplicatedLogs);
+
+                        // ... rest of the code
+                        const yearlyNational = aggregateMonthlyTicketsFromLogs(deduplicatedLogs, 'national');
+                        const yearlyCivil = aggregateMonthlyTicketsFromLogs(deduplicatedLogs, 'civil');
+                        const monthLabels = getMonthLabels();
+
+                        if (mainChart) {
+                            mainChart.data.labels = monthLabels;
+                            mainChart.data.datasets[0].data = yearlyNational;
+                            mainChart.data.datasets[1].data = yearlyCivil;
+                            mainChart.update();
+                        }
+
+                        populateYearlyAttendanceTable(yearlyNational, yearlyCivil, monthLabels);
+                        document.querySelectorAll('.chart-year').forEach(el => el.textContent = new Date().getFullYear());
+                        updateSummaryTimestamps(dynamicTimestamp);
+                        if (typeof window._clearStaleState === 'function') window._clearStaleState();
+
+                        // Calculate total yearly transactions and highest peak month
+                        let totalYearlyTransactions = 0;
+                        let highestPeakValue = 0;
+                        let highestPeakMonthName = 'N/A';
+
+                            yearlyNational.forEach((natCount, index) => {
+                                const civCount = yearlyCivil[index] || 0;
+                                const monthTotal = natCount + civCount;
+                                totalYearlyTransactions += monthTotal;
+                                if (monthTotal > highestPeakValue) {
+                                    highestPeakValue = monthTotal;
+                                    highestPeakMonthName = monthLabels[index];
+                                }
+                            });
+
+                            // Update the dashboard elements
+                            const attendanceCountEl = document.getElementById('summary-attendance-count');
+                            if (attendanceCountEl) {
+                                attendanceCountEl.innerText = totalYearlyTransactions;
+                            }
+                            
+                            const peakMonthEl = document.getElementById('highest-peak-month');
+                            if (peakMonthEl) {
+                                peakMonthEl.innerText = `${highestPeakMonthName} (${highestPeakValue})`;
+                            }
+
+
+                            // Helper aggregators for weekly/monthly visualizations
+                            const msPerDay = 24 * 60 * 60 * 1000;
+                            const now = new Date();
+                            const nowTs = now.getTime();
+
+                            const getMidnight = (date) => {
+                                const d = new Date(date);
+                                d.setHours(0, 0, 0, 0);
+                                return d;
+                            };
+
+                            const getWeekStart = (date) => {
+                                const d = getMidnight(date);
+                                const day = d.getDay();
+                                const isoDay = (day + 6) % 7;
+                                d.setDate(d.getDate() - isoDay);
+                                return d;
+                            };
+
+                            const getMonthStart = (date) => {
+                                const d = getMidnight(date);
+                                d.setDate(1);
+                                return d;
+                            };
+
+                            const getCutoff = (days) => {
+                                if (days === 7) return getWeekStart(now).getTime();
+                                if (days === 31) return getMonthStart(now).getTime();
+                                return nowTs - (days * msPerDay);
+                            };
+
+                            const aggregateCategory = (logs, dept, days) => {
+                                const cutoff = getCutoff(days);
+                                let regular = 0, priority = 0;
+                                logs.forEach(l => {
+                                    if (l.department !== dept) return;
+                                    const t = new Date(l.iso_timestamp || l.timestamp || l.timestamp_readable || l.date).getTime();
+                                    if (Number.isNaN(t) || t < cutoff) return;
+                                    // Only count on ISSUED to avoid inflating from ASSIGNED/COMPLETED entries
+                                    if ((l.action || '').toString().toUpperCase() !== 'ISSUED') return;
+                                    const isPriority = l.isPriority === true || l.isPriority === 'true' || (l.label && l.label.includes('-P-'));
+                                    if (isPriority) priority++; else regular++;
+                                });
+                                return { regular, priority };
+                            };
+
+                            const aggregateStatus = (logs, dept, days) => {
+                                const cutoff = getCutoff(days);
+                                let completed = 0, terminated = 0, requeued = 0;
+                                logs.forEach(l => {
+                                    if (l.department !== dept) return;
+                                    const t = new Date(l.iso_timestamp || l.timestamp || l.timestamp_readable || l.date).getTime();
+                                    if (Number.isNaN(t) || t < cutoff) return;
+                                    const action = (l.action || '').toString().toUpperCase();
+                                    if (action === 'COMPLETED') completed++;
+                                    else if (action === 'TERMINATED' || action === 'AUTO_TERMINATED_AFTER_REQUEUE') terminated++;
+                                    else if (action === 'REQUEUED' || action === 'PENDING_REQUEUE' || action === 'MANUALLY_REQUEUED') requeued++;
+                                });
+                                return { completed, terminated, requeued };
+                            };
+
+                            // National ID weekly
+                            try {
+                                const natWeeklyCat = aggregateCategory(deduplicatedLogs, 'national', 7);
+                                const natWeeklyStat = aggregateStatus(deduplicatedLogs, 'national', 7);
+                                if (orderChartWeekly) { orderChartWeekly.data.datasets[0].data = [natWeeklyCat.regular, natWeeklyCat.priority]; orderChartWeekly.update(); }
+                                if (myStatusChartWeekly) { myStatusChartWeekly.data.datasets[0].data = [natWeeklyStat.terminated, natWeeklyStat.completed, natWeeklyStat.requeued]; myStatusChartWeekly.update(); }
+
+                                const natMonthlyCat = aggregateCategory(deduplicatedLogs, 'national', 31);
+                                const natMonthlyStat = aggregateStatus(deduplicatedLogs, 'national', 31);
+                                if (orderChartMonthly) { orderChartMonthly.data.datasets[0].data = [natMonthlyCat.regular, natMonthlyCat.priority]; orderChartMonthly.update(); }
+                                if (myStatusChartMonthly) { myStatusChartMonthly.data.datasets[0].data = [natMonthlyStat.terminated, natMonthlyStat.completed, natMonthlyStat.requeued]; myStatusChartMonthly.update(); }
+                            } catch(e) { console.error('National aggregations failed', e); }
+
+                            // Civil weekly/monthly
+                            try {
+                                const civWeeklyCat = aggregateCategory(deduplicatedLogs, 'civil', 7);
+                                const civWeeklyStat = aggregateStatus(deduplicatedLogs, 'civil', 7);
+                                if (civilOrderChartWeekly) { civilOrderChartWeekly.data.datasets[0].data = [civWeeklyCat.regular, civWeeklyCat.priority]; civilOrderChartWeekly.update(); }
+                                if (civilEarningsChartWeekly) { civilEarningsChartWeekly.data.datasets[0].data = [civWeeklyStat.completed, civWeeklyStat.terminated, civWeeklyStat.requeued]; civilEarningsChartWeekly.update(); }
+
+                                const civMonthlyCat = aggregateCategory(deduplicatedLogs, 'civil', 31);
+                                const civMonthlyStat = aggregateStatus(deduplicatedLogs, 'civil', 31);
+                                if (civilOrderChartMonthly) { civilOrderChartMonthly.data.datasets[0].data = [civMonthlyCat.regular, civMonthlyCat.priority]; civilOrderChartMonthly.update(); }
+                                if (civilEarningsChartMonthly) { civilEarningsChartMonthly.data.datasets[0].data = [civMonthlyStat.completed, civMonthlyStat.terminated, civMonthlyStat.requeued]; civilEarningsChartMonthly.update(); }
+                            } catch(e) { console.error('Civil aggregations failed', e); }
+                        }
+                    } catch (err) {
+                        console.error("The live diagnostic streaming pipeline encountered an exception state error:", err);
+                    }
+                };
+
+                // Initialize Poll Intervals
+                syncDatabaseMetrics();
+                setInterval(syncDatabaseMetrics, 15000);
+
+                // Bind Actions and Redirection View Shortcuts
+                document.querySelectorAll('.btn-graph-link[data-target]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const section = e.currentTarget.dataset.target;
+                        if (section) switchSection(section);
+                    });
+                });
+
+                const exportBtn = document.getElementById('btnExportAnalyticsSnapshot');
+                if (exportBtn) { exportBtn.addEventListener('click', downloadAnalyticsSnapshotCSV); }
+
+                // Dynamic Report Date Filters Configurations Hook Setup
+                const refreshFilteredAnalysis = async () => {
+                    try {
+                        const logsRes = await fetch('/api/system-logs/ticket_logs');
+                        const logsData = await logsRes.json();
+                        if (logsData.success && Array.isArray(logsData.logs)) {
+                            const seen = new Set();
+                            const deduped = logsData.logs.filter(log => {
+                                const key = `${log.iso_timestamp || ''}|${log.label || ''}|${log.department || ''}`;
+                                if (seen.has(key)) return false;
+                                seen.add(key);
+                                return true;
+                            });
+                            updateTableSummaries(deduped);
+                        }
+                    } catch(e) { console.error(e); }
+                };
+
+                ['natidDateFilter', 'civilDateFilter'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('change', async (e) => {
+                            if (e.target.value) {
+                                const displayDate = new Date(e.target.value).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+                                updateSummaryTimestamps(`for ${displayDate}`);
+                            }
+                            await refreshFilteredAnalysis();
+                        });
+                    }
+                });
+            });
+
+            // --- 5. LOGISTICS COMPUTATIONAL DATA HELPER MATH HANDLERS ---
+            function getTicketDateISO(ticket) {
+                const dateSource = ticket.iso_timestamp || ticket.timestamp || ticket.timestamp_readable || ticket.date;
+                if (!dateSource) return null;
+                const parsedDate = new Date(dateSource);
+                return Number.isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString().slice(0, 10);
+            }
+
+            function populateSummaryDateSelectors(logs) {
+                const datesSet = new Set();
+                logs.forEach(ticket => { const iso = getTicketDateISO(ticket); if (iso) datesSet.add(iso); });
+                const sortedDates = [...datesSet].sort();
+                
+                const minDate = sortedDates.length > 0 ? sortedDates[0] : '';
+                const maxDate = sortedDates.length > 0 ? sortedDates[sortedDates.length - 1] : '';
+
+                ['natidDateFilter', 'civilDateFilter'].forEach(id => {
+                    const input = document.getElementById(id);
+                    if (!input) return;
+                    input.min = minDate;
+                    input.max = maxDate;
+                });
+            }
+
+            function filterTicketsByDate(tickets, selectedDate) {
+                if (!selectedDate) {
+                    const today = new Date().toISOString().slice(0, 10);
+                    return tickets.filter(ticket => getTicketDateISO(ticket) === today);
+                }
+                return tickets.filter(ticket => getTicketDateISO(ticket) === selectedDate);
+            }
+
+            function getMidnight(date) {
+                const d = new Date(date);
+                d.setHours(0, 0, 0, 0);
+                return d;
+            }
+
+            function getWeekStart(date) {
+                const d = getMidnight(date);
+                const day = d.getDay();
+                const isoDay = (day + 6) % 7;
+                d.setDate(d.getDate() - isoDay);
+                return d;
+            }
+
+            function getMonthStart(date) {
+                const d = getMidnight(date);
+                d.setDate(1);
+                return d;
+            }
+
+            function filterTicketsByRange(tickets, selectedDate, days) {
+                const referenceDate = selectedDate ? new Date(selectedDate) : new Date();
+                if (Number.isNaN(referenceDate.getTime())) return [];
+                referenceDate.setHours(0, 0, 0, 0);
+
+                let startDate;
+                if (days === 7) {
+                    startDate = getWeekStart(referenceDate);
+                } else if (days === 31) {
+                    startDate = getMonthStart(referenceDate);
+                } else {
+                    startDate = new Date(referenceDate);
+                    startDate.setDate(referenceDate.getDate() - (days - 1));
+                    startDate.setHours(0, 0, 0, 0);
+                }
+
+                const endExclusive = new Date(referenceDate);
+                endExclusive.setDate(endExclusive.getDate() + 1);
+                endExclusive.setHours(0, 0, 0, 0);
+
+                return tickets.filter(ticket => {
+                    const ticketIso = getTicketDateISO(ticket);
+                    if (!ticketIso) return false;
+                    const ticketTime = new Date(ticketIso).getTime();
+                    return ticketTime >= startDate.getTime() && ticketTime < endExclusive.getTime();
+                });
+            }
+
+            function updateTableSummaries(allTickets) {
+                const selectedNationalDate = document.getElementById('natidDateFilter')?.value || '';
+                const selectedCivilDate = document.getElementById('civilDateFilter')?.value || '';
+
+                const nationalTicketLogs = allTickets.filter(t => t.department?.toString().toLowerCase().includes('national'));
+                const civilTicketLogs = allTickets.filter(t => t.department?.toString().toLowerCase().includes('civil'));
+
+                const natDaily = filterTicketsByDate(nationalTicketLogs, selectedNationalDate);
+                const civDaily = filterTicketsByDate(civilTicketLogs, selectedCivilDate);
+                const natWeekly = filterTicketsByRange(nationalTicketLogs, selectedNationalDate, 7);
+                const civWeekly = filterTicketsByRange(civilTicketLogs, selectedCivilDate, 7);
+                const natMonthly = filterTicketsByRange(nationalTicketLogs, selectedNationalDate, 31);
+                const civMonthly = filterTicketsByRange(civilTicketLogs, selectedCivilDate, 31);
+
+                const calculateMetrics = (filteredLogs) => {
+                    const catMetrics = { regular: 0, priority: 0 };
+                    const statMetrics = { waiting: 0, serving: 0, completed: 0, terminated: 0 };
+                    const ticketMap = {};
+
+                    filteredLogs.forEach(entry => {
+                        if ((entry.action || '').toString().toUpperCase() === 'ISSUED') {
+                            const isPriority = entry.isPriority === true || entry.isPriority === 'true' || entry.category === 'Priority' || entry.label?.includes('-P-');
+                            if (isPriority) catMetrics.priority++; else catMetrics.regular++;
+                        }
+
+                        const label = entry.label || entry.ticketId;
+                        if (label) {
+                            const entryTime = new Date(entry.iso_timestamp || entry.timestamp || 0).getTime();
+                            const existing = ticketMap[label];
+                            const existingTime = existing ? new Date(existing.iso_timestamp || existing.timestamp || 0).getTime() : 0;
+                            if (!existing || entryTime > existingTime) {
+                                ticketMap[label] = entry;
+                            }
+                        }
+                    });
+
+                    Object.values(ticketMap).forEach(ticket => {
+                        const action = ticket.action?.toString().toUpperCase() || '';
+                        if (action === 'ASSIGNED' || action === 'SERVING') statMetrics.serving++;
+                        else if (action === 'COMPLETED') statMetrics.completed++;
+                        else if (action === 'TERMINATED' || action === 'AUTO_TERMINATED_AFTER_REQUEUE') statMetrics.terminated++;
+                        else if (action === 'ISSUED' || action === 'REQUEUED' || action === 'PENDING_REQUEUE' || action === 'MANUALLY_REQUEUED') statMetrics.waiting++;
+                    });
+
+                    return { ...catMetrics, ...statMetrics };
+                };
+
+                const natDailyMetrics = calculateMetrics(natDaily);
+                const civDailyMetrics = calculateMetrics(civDaily);
+                const natWeeklyMetrics = calculateMetrics(natWeekly);
+                const civWeeklyMetrics = calculateMetrics(civWeekly);
+                const natMonthlyMetrics = calculateMetrics(natMonthly);
+                const civMonthlyMetrics = calculateMetrics(civMonthly);
+
+                const setElementsValues = (prefix, metrics, suffix = '') => {
+                    const suffixKey = suffix ? `-${suffix}` : '';
+                    const safeSet = (id, value) => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerText = value;
+                    };
+
+                    safeSet(`${prefix}-cat-regular${suffixKey}`, metrics.regular);
+                    safeSet(`${prefix}-cat-priority${suffixKey}`, metrics.priority);
+                    safeSet(`${prefix}-cat-total${suffixKey}`, metrics.regular + metrics.priority);
+                    safeSet(`${prefix}-stat-waiting${suffixKey}`, metrics.waiting);
+                    safeSet(`${prefix}-stat-serving${suffixKey}`, metrics.serving);
+                    safeSet(`${prefix}-stat-completed${suffixKey}`, metrics.completed);
+                    safeSet(`${prefix}-stat-terminated${suffixKey}`, metrics.terminated);
+                    safeSet(`${prefix}-stat-total${suffixKey}`, metrics.regular + metrics.priority);
+                };
+
+                setElementsValues('nat', natDailyMetrics);
+                setElementsValues('nat', natWeeklyMetrics, 'weekly');
+                setElementsValues('nat', natMonthlyMetrics, 'monthly');
+                setElementsValues('civil', civDailyMetrics);
+                setElementsValues('civil', civWeeklyMetrics, 'weekly');
+                setElementsValues('civil', civMonthlyMetrics, 'monthly');
+            }
+
+            function updateSummaryTimestamps(timestampText) {
+                ['mainchart-timestamp','attendance-breakdown-timestamp','nat-cat-updated', 'nat-cat-updated-weekly', 'nat-cat-updated-monthly', 'nat-stat-updated', 'nat-stat-updated-weekly', 'nat-stat-updated-monthly', 'civil-cat-updated', 'civil-cat-updated-weekly', 'civil-cat-updated-monthly', 'civil-stat-updated', 'civil-stat-updated-weekly', 'civil-stat-updated-monthly'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = timestampText;
+                });
+            }
+
+            async function downloadAnalyticsSnapshotCSV() {
+                try {
+                    const logsRes = await fetch('/api/system-logs/ticket_logs');
+                    const logsData = await logsRes.json();
+                    if (!logsData.success || !Array.isArray(logsData.logs) || logsData.logs.length === 0) {
+                        return alert('No analytical transactions found within query constraints to download.');
+                    }
+
+                    const headers = ['Timestamp', 'Department Element Node', 'Ticket Identifier ID', 'User Demographics Category', 'Transaction Life Phase Status', 'Counter Assignment Target Windows'];
+                    const csvRows = [
+                        headers.join(','),
+                        ...logsData.logs.map(log => {
+                            const t = log.timestamp_readable || new Date(log.iso_timestamp).toLocaleString();
+                            const d = log.department || 'General Registry Desk';
+                            const tid = log.ticketId || log.label || 'N/A';
+                            const c = log.category || (log.isPriority ? 'Priority Target Class' : 'Standard Regular');
+                            const s = log.status || log.action || 'Unknown State';
+                            const w = log.windows || log.window || 'Processing Desk Standby';
+                            return [t, d, tid, c, s, w].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',');
+                        })
+                    ];
+
+                    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `PSA_Queue_Analytic_MasterLogs_${new Date().toISOString().slice(0,10)}.csv`;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch(e) { console.error("Snapshot generation aborted: ", e); }
+            }
+
+            function exportChartPNG(canvasId, fileName) {
+                const chartMap = {
+                    'orderChart': orderChart,
+                    'ticketStatusChart': myStatusChart,
+                    'orderChartWeekly': orderChartWeekly,
+                    'ticketStatusChartWeekly': myStatusChartWeekly,
+                    'orderChartMonthly': orderChartMonthly,
+                    'ticketStatusChartMonthly': myStatusChartMonthly,
+                    'civilOrderChart': civilOrderChart,
+                    'civilEarningsChart': civilEarningsChart,
+                    'civilOrderChartWeekly': civilOrderChartWeekly,
+                    'civilEarningsChartWeekly': civilEarningsChartWeekly,
+                    'civilOrderChartMonthly': civilOrderChartMonthly,
+                    'civilEarningsChartMonthly': civilEarningsChartMonthly
+                };
+
+                const chart = chartMap[canvasId];
+                if (!chart) {
+                    alert('Chart not found or not ready. Please wait for the chart to load.');
+                    return;
+                }
+
+                try {
+                    const image = chart.toBase64Image();
+                    const link = document.createElement('a');
+                    link.href = image;
+                    link.download = `${fileName}_${new Date().toISOString().slice(0,10)}.png`;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch(e) {
+                    console.error('Chart export failed:', e);
+                    alert('Failed to export chart. Please try again.');
+                }
+            }
+
+            // Socket Event Listeners for Live Inter-process Updates
+            window.socket.on('ticket_logs_updated', () => {
+                if (typeof window._clearStaleState === 'function') window._clearStaleState();
+                const natFilter = document.getElementById('natidDateFilter')?.value || '';
+                const civFilter = document.getElementById('civilDateFilter')?.value || '';
+                if(!natFilter && !civFilter) {
+                    fetch('/api/system-logs/ticket_logs')
+                        .then(r => r.json())
+                        .then(logsData => {
+                            const rawLogs = logsData.success && Array.isArray(logsData.logs) ? logsData.logs : [];
+                            // Deduplicate before processing (server already deduplicates, but guard here too)
+                            const seen = new Set();
+                            const allLogs = rawLogs.filter(log => {
+                                const key = `${log.iso_timestamp || ''}|${log.label || ''}|${log.department || ''}`;
+                                if (seen.has(key)) return false;
+                                seen.add(key);
+                                return true;
+                            });
+                            if (allLogs.length > 0) {
+                                updateTableSummaries(allLogs);
+                                
+                                // Calculate and update yearly transaction metrics
+                                const yearlyNational = aggregateMonthlyTicketsFromLogs(allLogs, 'national');
+                                const yearlyCivil = aggregateMonthlyTicketsFromLogs(allLogs, 'civil');
+                                
+                                const monthLabels = getMonthLabels();
+                                let totalYearlyTransactions = 0;
+                                let highestPeakValue = 0;
+                                let highestPeakMonthName = 'N/A';
+
+                                yearlyNational.forEach((natCount, index) => {
+                                    const civCount = yearlyCivil[index] || 0;
+                                    const monthTotal = natCount + civCount;
+                                    totalYearlyTransactions += monthTotal;
+                                    if (monthTotal > highestPeakValue) {
+                                        highestPeakValue = monthTotal;
+                                        highestPeakMonthName = monthLabels[index];
+                                    }
+                                });
+
+                                const attendanceCountEl = document.getElementById('summary-attendance-count');
+                                if (attendanceCountEl) {
+                                    attendanceCountEl.innerText = totalYearlyTransactions;
+                                }
+                                
+                                const peakMonthEl = document.getElementById('highest-peak-month');
+                                if (peakMonthEl) {
+                                    peakMonthEl.innerText = `${highestPeakMonthName} (${highestPeakValue})`;
+                                }
+                                
+                                const now = new Date();
+                                const formattedDate = now.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+                                const formattedTime = now.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
+                                updateSummaryTimestamps(`as of ${formattedDate} ${formattedTime}`);
+                            }
+                        });
+                }
+            });
+        </script>
+    </body>
+</html>

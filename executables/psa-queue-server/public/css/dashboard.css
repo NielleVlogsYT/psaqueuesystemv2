@@ -1,0 +1,194 @@
+:root { 
+    --psa-blue: #0038A8; 
+    --psa-red: #D10000; 
+    --psa-green: #28a745; 
+    --bg-glass: rgba(255, 255, 255, 0.95);
+}
+
+body { 
+    margin: 0; 
+    font-family: 'Segoe UI', sans-serif; 
+    background: #0a0e14 url('/res/main_bg.jpg') no-repeat center center fixed; 
+    background-size: cover; 
+    height: 100vh; 
+    display: flex; 
+    flex-direction: column;
+    overflow: hidden;
+ animation: slideFadeIn 0.6s ease-out forwards;
+}
+
+@keyframes slideFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px); /* Starts 20px below its normal position */
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0); /* Ends at its normal position */
+    }
+}
+
+.header-nav { 
+    background: white; 
+    width: 95%; 
+    margin: 15px auto; 
+    padding: 10px 25px; 
+    border-radius: 15px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+}
+.logo-section { display: flex; align-items: center; gap: 15px; }
+.logo-section i { font-size: 2rem; color: var(--psa-blue); }
+.title-text h1 { margin: 0; font-size: 1.1rem; color: var(--psa-blue); text-transform: uppercase; }
+.title-text p { margin: 0; font-size: 0.9rem; font-weight: bold; color: #555; }
+.title-text .user-meta { margin-top: 6px; color: #444; font-size: 0.9rem; font-weight: 600; }
+
+.content-grid { display: flex; flex: 1; gap: 20px; padding: 0 2.5% 20px 2.5%; height: calc(100vh - 120px); }
+
+.controller-panel {
+    flex: 1.5; background: var(--bg-glass); backdrop-filter: blur(10px);
+    border-radius: 25px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center;
+}
+
+.tickets-panel {
+    flex: 1; background: rgba(0, 56, 168, 0.9); backdrop-filter: blur(10px);
+    border-radius: 25px; padding: 25px; display: flex; flex-direction: column;
+    color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.tickets-panel.dual-queue {
+    gap: 20px;
+}
+
+.queue-section {
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 220px;
+}
+
+.queue-section .queue-title {
+    color: #ffffff;
+}
+
+.ticket-scroll {
+    flex: 1;
+    min-height: 150px;
+}
+
+.window-badge { background: var(--psa-blue); color: white; padding: 5px 20px; border-radius: 50px; font-weight: bold; margin-bottom: 10px; }
+.serving-label { color: #666; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; }
+.ticket-display { font-size: 5.5rem; font-weight: 900; color: #111; margin: 10px 0; font-family: 'Courier New', monospace; border-bottom: 5px solid var(--psa-blue); min-width: 350px; }
+.ticket-display.closed { color: #6b7280; border-bottom-color: #94a3b8; letter-spacing: 0.15em; }
+
+.control-btns { display: flex; gap: 30px; margin-top: 30px; }
+.action-btn { border: none; border-radius: 20px; cursor: pointer; width: 160px; padding: 20px 10px; transition: 0.3s; color: white; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.action-btn i { font-size: 2.2rem; }
+.action-btn span { font-weight: bold; font-size: 0.85rem; text-transform: uppercase; }
+.btn-terminate { background: var(--psa-red); }
+.btn-complete { background: var(--psa-green); }
+.btn-warning { background: #f59e0b; }
+.action-btn:hover { filter: brightness(1.1); transform: translateY(-3px); }
+
+.ticket-timer { font-size: 1.1rem; font-weight: 700; color: #fbbf24; text-align: center; padding: 8px 12px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; margin: 8px 0; font-family: 'Courier New', monospace; transition: color 0.3s ease; }
+
+.queue-title { font-size: 1.2rem; font-weight: 800; border-bottom: 2px solid rgba(255,255,255,0.18); padding-bottom: 10px; margin-bottom: 15px; }
+.ticket-scroll { overflow-y: auto; flex: 1; }
+.ticket-card { background: rgba(255,255,255,0.15); border-radius: 18px; padding: 20px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 12px; }
+.priority-ticket-card { background: rgba(255, 59, 48, 0.18); border: 1px solid rgba(255, 59, 48, 0.4); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.ticket-label { font-weight: 800; font-size: 1.3rem; }
+.ticket-meta { color: rgba(255,255,255,0.8); font-size: 0.95rem; }
+.assign-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.assign-btn { font-weight: 700; border: none; border-radius: 12px; padding: 10px 16px; cursor: pointer; color: white; background: #0038A8; transition: transform 0.2s ease, filter 0.2s ease; }
+.assign-btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.assign-btn.secondary { background: #6c757d; }
+
+.btn-requeue-check { background: var(--psa-green); }
+.btn-requeue-check:hover { background: #1e7e34; }
+
+.btn-requeue-cancel { background: var(--psa-red); }
+.btn-requeue-cancel:hover { background: #a80000; }
+
+.empty-queue-msg { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); text-align: center; }
+
+/* Token Pills (Queue Tickets) */
+.token-pill { 
+    display: inline-block; 
+    background: rgba(255, 255, 255, 0.25); 
+    color: white; 
+    padding: 12px 20px; 
+    border-radius: 15px; 
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    cursor: pointer; 
+    font-weight: bold; 
+    font-size: 0.95rem; 
+    margin-bottom: 8px;
+    transition: 0.2s ease;
+}
+.token-pill:hover { background: rgba(255, 255, 255, 0.35); transform: translateY(-2px); }
+.token-pill.prio { background: rgba(255, 59, 48, 0.6); border-color: rgba(255, 59, 48, 0.8); }
+.token-pill.prio:hover { background: rgba(255, 59, 48, 0.75); }
+
+/* Requeue Ticket Card with Action Buttons */
+.requeue-ticket-card {
+    background: rgba(255, 193, 7, 0.15) !important;
+    padding: 8px !important;
+    border-radius: 15px !important;
+    border: 2px dashed rgba(255, 193, 7, 0.5) !important;
+    margin-bottom: 8px;
+}
+
+.btn-requeue-check, .btn-requeue-cancel {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: 0.2s ease;
+    color: white;
+    min-width: 40px;
+}
+
+.btn-requeue-check {
+    background: var(--psa-green);
+}
+
+.btn-requeue-check:hover {
+    background: #1e7e34;
+    filter: brightness(1.1);
+    transform: scale(1.05);
+}
+
+.btn-requeue-cancel {
+    background: var(--psa-red);
+}
+
+.btn-requeue-cancel:hover {
+    background: #a80000;
+    filter: brightness(1.1);
+    transform: scale(1.05);
+}
+
+/* Custom Confirmation Modal Styles */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: center; z-index: 9999; opacity: 0; visibility: hidden; transition: 0.3s ease; }
+.modal-overlay.active { opacity: 1; visibility: visible; }
+.modal-box { background: var(--bg-glass); padding: 30px 40px; border-radius: 20px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 15px 35px rgba(0,0,0,0.4); transform: translateY(-30px); transition: 0.3s ease; }
+.modal-overlay.active .modal-box { transform: translateY(0); }
+.modal-icon { font-size: 3.5rem; margin-bottom: 15px; }
+.modal-title { font-size: 1.5rem; font-weight: 800; margin: 0 0 10px 0; color: #333; }
+.modal-text { color: #555; margin-bottom: 25px; font-size: 1.05rem; font-weight: 500; }
+.modal-actions { display: flex; gap: 15px; justify-content: center; }
+.modal-btn { padding: 12px 25px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1rem; color: white; flex: 1; }
+.btn-cancel { background: #6c757d; }
+.btn-confirm { background: var(--psa-blue); }
+.modal-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+

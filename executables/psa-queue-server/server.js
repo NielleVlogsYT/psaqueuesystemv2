@@ -44,6 +44,8 @@ const client = new MongoClient(uri);
 let db;
 let adminOTPs = {};
 let requeueTimers = {};
+const PH_SG_UTC_OFFSET_MS = 8 * 60 * 60 * 1000;
+const PH_SG_TIME_ZONE = 'Asia/Manila';
 
 // --- 2. GLOBAL QUEUE STATE ---
 function createDefaultTicketSequences() {
@@ -92,15 +94,28 @@ let queueStore = {
 const activeUsers = {};
 
 function getTodayString() {
-    const now = new Date();
-    return now.toISOString().slice(0, 10);
+    return new Date(Date.now() + PH_SG_UTC_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+function getPhSgDayStart(dateString = getTodayString()) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(Date.UTC(year, month - 1, day) - PH_SG_UTC_OFFSET_MS);
+}
+
+function getNextPhSgMidnight(now = new Date()) {
+    const phSgNow = new Date(now.getTime() + PH_SG_UTC_OFFSET_MS);
+    return new Date(Date.UTC(
+        phSgNow.getUTCFullYear(),
+        phSgNow.getUTCMonth(),
+        phSgNow.getUTCDate() + 1
+    ) - PH_SG_UTC_OFFSET_MS);
 }
 
 function buildDateFilter(dateString) {
     if (!dateString) return null;
-    const [year, month, day] = dateString.split('-').map(Number);
-    if (!year || !month || !day) return null;
-    const start = new Date(Date.UTC(year, month - 1, day) - 8 * 3600000); // midnight PHT
+    const start = getPhSgDayStart(dateString);
+    if (!start) return null;
     const end = new Date(start.getTime() + 24 * 3600000);
     return { iso_timestamp: { $gte: start, $lt: end } };
 }
@@ -118,8 +133,7 @@ async function performDailyReset() {
         const today = getTodayString();
         console.log(`🕛 Performing nightly reset for ${today}...`);
 
-        const cutoff = new Date(today);
-        cutoff.setHours(0, 0, 0, 0);
+        const cutoff = getPhSgDayStart(today);
         const logsToArchive = await db.collection('ticket_logs')
             .find({ iso_timestamp: { $lt: cutoff } }).toArray();
         if (logsToArchive.length > 0) {
@@ -176,9 +190,9 @@ async function resetTodayQueueCounters() {
 
 function scheduleMidnightReset() {
     const now = new Date();
-    const nextMidnight = new Date(now);
-    nextMidnight.setHours(24, 0, 0, 0, 0);
+    const nextMidnight = getNextPhSgMidnight(now);
     const delay = nextMidnight.getTime() - now.getTime();
+    console.log(`🕛 Next queue reset scheduled for 12:00 AM PH/SG (${nextMidnight.toISOString()}).`);
     setTimeout(async () => {
         await performDailyReset();
         scheduleMidnightReset();
@@ -190,7 +204,7 @@ async function logEvent(collectionName, data) {
     if (!db) return;
     try {
         const entry = {
-            timestamp_readable: new Date().toLocaleString('en-PH'),
+            timestamp_readable: new Date().toLocaleString('en-PH', { timeZone: PH_SG_TIME_ZONE }),
             iso_timestamp: new Date(),
             ...data
         };
@@ -562,10 +576,8 @@ app.post('/api/system-logs/delete_range', async (req, res) => {
             }
         }
 
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        const tomorrowStart = new Date(todayStart);
-        tomorrowStart.setDate(todayStart.getDate() + 1);
+        const todayStart = getPhSgDayStart();
+        const tomorrowStart = new Date(todayStart.getTime() + 24 * 3600000);
         const rangeIncludesToday = startDate < tomorrowStart && endDate > todayStart;
 
         if (rangeIncludesToday && targets.includes('ticket_logs')) {
@@ -991,10 +1003,8 @@ io.on('connection', (socket) => {
     
     socket.on('reset_Dailyqueues', async () => {
         try {
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-            const tomorrowStart = new Date(todayStart);
-            tomorrowStart.setDate(todayStart.getDate() + 1);
+            const todayStart = getPhSgDayStart();
+            const tomorrowStart = new Date(todayStart.getTime() + 24 * 3600000);
 
             const delFilter = { iso_timestamp: { $gte: todayStart, $lt: tomorrowStart } };
             if (db) {
@@ -1032,6 +1042,8 @@ io.on('connection', (socket) => {
                 return;
             }
 
+            await ensureDailyTicketReset();
+
             const prefixes = { national: 'NID', civil: 'CR' };
             const prefix = prefixes[dept] || 'TKT';
             const typeChar = isPriority ? 'P' : 'R';
@@ -1051,7 +1063,7 @@ io.on('connection', (socket) => {
                 status: 'WAITING',
                 issuedTime: new Date(),
                 iso_timestamp: new Date(),
-                timestamp_readable: new Date().toLocaleString('en-PH')
+                timestamp_readable: new Date().toLocaleString('en-PH', { timeZone: PH_SG_TIME_ZONE })
             };
 
             queueStore.waiting[dept].push(ticket);

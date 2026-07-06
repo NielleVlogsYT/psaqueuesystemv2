@@ -1,6 +1,7 @@
 *.apk binary
 *.dll binary
 *.exe binary
+*.ico binary
 *.jpg binary
 *.jpeg binary
 *.png binary

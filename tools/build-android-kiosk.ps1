@@ -59,6 +59,8 @@ $legacyApk = Join-Path $repoRoot "executables\app-debug.apk"
 $keystore = Join-Path $projectDir "keys\psa-kiosk-release.jks"
 $keyAlias = "psa-kiosk-release"
 $keyPassword = if ($env:PSA_KIOSK_KEYSTORE_PASS) { $env:PSA_KIOSK_KEYSTORE_PASS } else { "psa-kiosk-local" }
+$minSdkVersion = "21"
+$targetSdkVersion = "36"
 
 & $aapt2 compile --dir (Join-Path $projectDir "res") -o $compiledZip
 if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
@@ -67,6 +69,10 @@ if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
     -I $androidJar `
     --manifest (Join-Path $projectDir "AndroidManifest.xml") `
     --java (Join-Path $buildDir "gen") `
+    --min-sdk-version $minSdkVersion `
+    --target-sdk-version $targetSdkVersion `
+    --version-code 2 `
+    --version-name "1.0.1" `
     -o $unsignedApk `
     $compiledZip `
     --auto-add-overlay
@@ -89,7 +95,7 @@ $javacArgs = @(
 if ($LASTEXITCODE -ne 0) { throw "javac failed" }
 
 [string[]]$classFiles = @(Get-ChildItem -LiteralPath (Join-Path $buildDir "classes") -Recurse -Filter "*.class" | ForEach-Object { $_.FullName })
-& $d8 --min-api 23 --lib $androidJar --output (Join-Path $buildDir "dex") @classFiles
+& $d8 --min-api $minSdkVersion --lib $androidJar --output (Join-Path $buildDir "dex") @classFiles
 if ($LASTEXITCODE -ne 0) { throw "d8 failed" }
 
 Copy-Item -LiteralPath $unsignedApk -Destination $unalignedApk -Force

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PSA Queue - Admin Dashboard</title>
+    <title>PSA Queuing - Admin Dashboard</title>
     <link rel="icon" type="image/png" href="./res/PSA.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -1050,9 +1050,20 @@ html.dark-theme body {
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getAuth, signOut, onAuthStateChanged, updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-        import { getDatabase, ref, set, get, remove, onValue } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+        const appConfig = await fetch('/api/config').then(res => res.json()).catch(() => ({ localMode: false }));
+        let auth = null;
+        let signOut = null;
+        let onAuthStateChanged = null;
+        let updateEmail = null;
+        let updatePassword = null;
+        let EmailAuthProvider = null;
+        let reauthenticateWithCredential = null;
+        let db = null;
+        let ref = null;
+        let set = null;
+        let get = null;
+        let remove = null;
+        let onValue = null;
 
         const firebaseConfig = {
             apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
@@ -1063,9 +1074,49 @@ html.dark-theme body {
             appId: "1:869956656004:web:3d2a98bea880c701605bd1"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
+        const getLocalSession = () => {
+            try {
+                return JSON.parse(localStorage.getItem('psa_local_session') || 'null');
+            } catch (err) {
+                return null;
+            }
+        };
+
+        if (appConfig.localMode) {
+            document.title = `${appConfig.systemName || 'PSA Queuing'} - Admin Dashboard`;
+            auth = { get currentUser() { return getLocalSession(); } };
+            signOut = async () => {
+                localStorage.removeItem('psa_local_session');
+            };
+            onAuthStateChanged = (_auth, callback) => callback(_auth.currentUser);
+            updateEmail = async () => { throw new Error('Local mode email changes are managed from the user list.'); };
+            updatePassword = async () => { throw new Error('Local mode password changes are managed by the local administrator.'); };
+            EmailAuthProvider = { credential: () => ({}) };
+            reauthenticateWithCredential = async () => {};
+            ref = () => null;
+            set = async () => {};
+            get = async () => ({ exists: () => false, val: () => null });
+            remove = async () => {};
+            onValue = () => () => {};
+        } else {
+            const firebaseApp = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js");
+            const firebaseAuth = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js");
+            const firebaseDatabase = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js");
+            const app = firebaseApp.initializeApp(firebaseConfig);
+            auth = firebaseAuth.getAuth(app);
+            signOut = firebaseAuth.signOut;
+            onAuthStateChanged = firebaseAuth.onAuthStateChanged;
+            updateEmail = firebaseAuth.updateEmail;
+            updatePassword = firebaseAuth.updatePassword;
+            EmailAuthProvider = firebaseAuth.EmailAuthProvider;
+            reauthenticateWithCredential = firebaseAuth.reauthenticateWithCredential;
+            db = firebaseDatabase.getDatabase(app);
+            ref = firebaseDatabase.ref;
+            set = firebaseDatabase.set;
+            get = firebaseDatabase.get;
+            remove = firebaseDatabase.remove;
+            onValue = firebaseDatabase.onValue;
+        }
         const socket = io();
         
         // --- DEVICE DETECTION & SESSION MANAGEMENT ---
@@ -1101,6 +1152,8 @@ html.dark-theme body {
         };
         
         const fetchIpAddress = async () => {
+            if (appConfig.localMode) return 'Local network';
+
             try {
                 const res = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
                 const data = await res.json();
@@ -2036,6 +2089,12 @@ html.dark-theme body {
             const newPassword = document.getElementById('accNewPassword').value;
             const confirmPassword = document.getElementById('accConfirmNewPassword').value;
             const statusEl = document.getElementById('accountUpdateStatus');
+
+            if (appConfig.localMode) {
+                statusEl.style.color = '#f39c12';
+                statusEl.innerText = 'Local mode account changes are managed from the user list.';
+                return;
+            }
             
             if (!currentPassword) {
                 statusEl.style.color = '#e74c3c';
@@ -2131,6 +2190,13 @@ html.dark-theme body {
             const deviceList = document.getElementById('privDeviceList');
             const statusEl = document.getElementById('privacyStatus');
             const user = auth.currentUser;
+
+            if (appConfig.localMode) {
+                ipField.value = 'Local network';
+                deviceList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 15px;">Local mode uses this browser session on your LAN.</div>';
+                statusEl.innerText = '';
+                return;
+            }
             
             ipField.value = 'Fetching network details...';
             deviceList.innerHTML = '<div style="text-align: center; color: #888; padding: 15px;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Scanning active sessions...</div>';

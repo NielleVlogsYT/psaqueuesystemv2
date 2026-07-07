@@ -1,6 +1,3 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-
 const firebaseConfig = {
     apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
     authDomain: "queue-project-login.firebaseapp.com",
@@ -10,9 +7,33 @@ const firebaseConfig = {
     appId: "1:869956656004:web:3d2a98bea880c701605bd1"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const authSocket = io();
+let appConfigPromise = null;
+let firebaseAuthPromise = null;
+
+async function getAppConfig() {
+    if (!appConfigPromise) {
+        appConfigPromise = fetch('/api/config').then(res => res.json()).catch(() => ({ localMode: false }));
+    }
+    return appConfigPromise;
+}
+
+async function getFirebaseAuth() {
+    if (!firebaseAuthPromise) {
+        firebaseAuthPromise = Promise.all([
+            import("https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js"),
+            import("https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js")
+        ]).then(([firebaseApp, firebaseAuth]) => {
+            const app = firebaseApp.initializeApp(firebaseConfig);
+            return {
+                auth: firebaseAuth.getAuth(app),
+                signOut: firebaseAuth.signOut,
+                onAuthStateChanged: firebaseAuth.onAuthStateChanged
+            };
+        });
+    }
+    return firebaseAuthPromise;
+}
 
 async function fetchUserRole(email) {
     try {
@@ -29,6 +50,20 @@ async function fetchUserRole(email) {
     }
 }
 
+function getLocalSession() {
+    try {
+        return JSON.parse(localStorage.getItem('psa_local_session') || 'null');
+    } catch (error) {
+        return null;
+    }
+}
+
+function clearLocalSession() {
+    localStorage.removeItem('psa_local_session');
+    localStorage.removeItem('psa_admin_token');
+    localStorage.removeItem('psa_role');
+}
+
 function renderUserInfo(elementId, email, role) {
     const target = document.getElementById(elementId);
     if (!target) return;
@@ -38,47 +73,65 @@ function renderUserInfo(elementId, email, role) {
     `;
 }
 
-function forceLogoutHandler(kickedEmail) {
-    const currentUser = auth.currentUser;
-    if (currentUser && currentUser.email === kickedEmail) {
-        alert("Session Terminated: You have been logged out by an Admin or logged in from another device.");
-        signOut(auth).then(() => {
-            localStorage.clear();
-            window.location.href = "/login.html";
-        });
+function registerControllerWindow({ dept, windowKey, email }) {
+    if (!dept || !windowKey) return;
+    authSocket.emit('register_controller_window', { dept, windowKey, email });
+}
+
+function registerActiveUser({ email, role, pageLocation }) {
+    authSocket.emit('register_active_user', { email, role, location: pageLocation });
+}
+
+async function redirectUnauthorized(redirectUrl, signOutCallback = null) {
+    alert('Unauthorized or banned account. Access denied.');
+    try {
+        if (signOutCallback) await signOutCallback();
+    } finally {
+        localStorage.clear();
+        window.location.href = redirectUrl;
     }
 }
 
 export async function initControllerSession({ elementId, pageLocation, allowedRoles = ['controller', 'admin'], redirectUrl = '/login.html', dept = null, windowKey = null }) {
+    const appConfig = await getAppConfig();
 
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) {
+    if (appConfig.localMode) {
+        const user = getLocalSession();
+        if (!user || !user.email) {
             window.location.href = redirectUrl;
             return;
         }
 
-        const role = await fetchUserRole(user.email);
+        const role = await fetchUserRole(user.email) || user.role;
         if (!role || !allowedRoles.includes(role) || role === 'banned') {
-            alert('Unauthorized or banned account. Access denied.');
-            signOut(auth).then(() => {
-                localStorage.clear();
-                window.location.href = redirectUrl;
-            });
+            clearLocalSession();
+            window.location.href = redirectUrl;
             return;
         }
 
         renderUserInfo(elementId, user.email, role);
-        authSocket.emit('register_active_user', { email: user.email, role, location: pageLocation });
+        registerActiveUser({ email: user.email, role, pageLocation });
+        registerControllerWindow({ dept, windowKey, email: user.email });
+    } else {
+        const { auth, signOut, onAuthStateChanged } = await getFirebaseAuth();
 
-        // Register window lock if dept and windowKey are provided
-        if (dept && windowKey) {
-            authSocket.emit('register_controller_window', {
-                dept: dept,
-                windowKey: windowKey,
-                email: user.email
-            });
-        }
-    });
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = redirectUrl;
+                return;
+            }
+
+            const role = await fetchUserRole(user.email);
+            if (!role || !allowedRoles.includes(role) || role === 'banned') {
+                await redirectUnauthorized(redirectUrl, () => signOut(auth));
+                return;
+            }
+
+            renderUserInfo(elementId, user.email, role);
+            registerActiveUser({ email: user.email, role, pageLocation });
+            registerControllerWindow({ dept, windowKey, email: user.email });
+        });
+    }
 
     authSocket.on('window_lock_error', (err) => {
         showWindowLockErrorModal(err.message);
@@ -88,7 +141,28 @@ export async function initControllerSession({ elementId, pageLocation, allowedRo
         console.log(status.message);
     });
 
-    authSocket.on('force_logout_signal', forceLogoutHandler);
+    authSocket.on('force_logout_signal', async (kickedEmail) => {
+        const appConfig = await getAppConfig();
+        if (appConfig.localMode) {
+            const currentUser = getLocalSession();
+            if (currentUser && currentUser.email === kickedEmail) {
+                alert("Session Terminated: You have been logged out by an Admin or logged in from another device.");
+                clearLocalSession();
+                window.location.href = redirectUrl;
+            }
+            return;
+        }
+
+        const { auth, signOut } = await getFirebaseAuth();
+        const currentUser = auth.currentUser;
+        if (currentUser && currentUser.email === kickedEmail) {
+            alert("Session Terminated: You have been logged out by an Admin or logged in from another device.");
+            signOut(auth).then(() => {
+                localStorage.clear();
+                window.location.href = redirectUrl;
+            });
+        }
+    });
 }
 
 function showWindowLockErrorModal(message) {
@@ -134,7 +208,7 @@ function showWindowLockErrorModal(message) {
                 margin: 0 auto 20px;
                 font-size: 30px;
             ">
-                ⚠️
+                !
             </div>
             <h2 style="
                 color: #1f2a3a;
@@ -183,4 +257,3 @@ function showWindowLockErrorModal(message) {
 
     overlay.style.display = 'flex';
 }
-

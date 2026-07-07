@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PSA Queue - Create User</title>
+    <title>PSA Queuing - Create User</title>
     <link rel="icon" type="image/png" href="./res/PSA.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -358,9 +358,10 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        // Added signOut to the imports
-        import { getAuth, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+        const appConfig = await fetch('/api/config').then(res => res.json()).catch(() => ({ localMode: false }));
+        let createUserWithEmailAndPassword = null;
+        let signOut = null;
+        let secondaryAuth = null;
 
         // Security check: Ensure the person viewing this is actually logged in as admin
         if(localStorage.getItem('psa_role') !== 'admin') {
@@ -377,12 +378,17 @@
             appId: "1:869956656004:web:3d2a98bea880c701605bd1"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app); // Primary auth
-
-        // NEW: Secondary Firebase instance to prevent overriding the current admin session
-        const secondaryApp = initializeApp(firebaseConfig, "UserCreationInstance");
-        const secondaryAuth = getAuth(secondaryApp);
+        if (appConfig.localMode) {
+            document.title = `${appConfig.systemName || 'PSA Queuing'} - Create User`;
+        } else {
+            const firebaseApp = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js");
+            const firebaseAuth = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js");
+            firebaseApp.initializeApp(firebaseConfig);
+            const secondaryApp = firebaseApp.initializeApp(firebaseConfig, "UserCreationInstance");
+            secondaryAuth = firebaseAuth.getAuth(secondaryApp);
+            createUserWithEmailAndPassword = firebaseAuth.createUserWithEmailAndPassword;
+            signOut = firebaseAuth.signOut;
+        }
 
         // Helper to generate a complex temporary password meeting your system's criteria
         function generateTempPassword() {
@@ -433,14 +439,16 @@
                     return; // Stop the process here
                 }
 
-                btn.innerText = "Creating account & sending email...";
+                btn.innerText = appConfig.localMode ? "Creating local account..." : "Creating account & sending email...";
                 const tempPassword = generateTempPassword();
 
-                // 1. Create account in Firebase using secondaryAuth
-                const userCred = await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
-                
-                // Immediately sign out the newly created user to keep secondaryAuth clean
-                await signOut(secondaryAuth);
+                if (!appConfig.localMode) {
+                    // 1. Create account in Firebase using secondaryAuth
+                    await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
+                    
+                    // Immediately sign out the newly created user to keep secondaryAuth clean
+                    await signOut(secondaryAuth);
+                }
 
                 // 2. Save extended profile details & role to your backend database
                 await fetch('/api/set-role', { 
@@ -452,19 +460,28 @@
                         firstName: fName,
                         lastName: lName,
                         middleInitial: mInitial,
-                        employeeId: empId
+                        employeeId: empId,
+                        localPassword: appConfig.localMode ? tempPassword : undefined
                     }) 
                 });
 
-                // 3. Send the Welcome Email to the User
-                await fetch('/api/send-welcome-email', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, tempPassword: tempPassword, firstName: fName }) 
-                });
+                if (!appConfig.localMode) {
+                    // 3. Send the Welcome Email to the User
+                    await fetch('/api/send-welcome-email', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email, tempPassword: tempPassword, firstName: fName }) 
+                    });
+                }
 
                 // 4. Show Success Modal
                 document.getElementById('sentEmailAddress').innerText = email;
+                const successMessage = document.querySelector('#successModal p');
+                if (successMessage && appConfig.localMode) {
+                    successMessage.innerHTML = `Account successfully registered locally for <strong id="sentEmailAddress">${email}</strong>.<br><br>Temporary password: <strong>${tempPassword}</strong>`;
+                } else if (successMessage) {
+                    successMessage.innerHTML = `Account successfully registered. A temporary password has been generated and securely emailed to the user at <strong id="sentEmailAddress">${email}</strong>.`;
+                }
                 document.getElementById('successModal').classList.add('active');
 
                 // Reset Form

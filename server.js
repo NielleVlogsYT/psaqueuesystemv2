@@ -2,34 +2,12 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const os = require('os');
+const crypto = require('crypto');
 const { Server } = require('socket.io');
 const { MongoClient, ObjectId } = require('mongodb');
+const { createLocalDatabase } = require('./local-database');
 
 // --- FIREBASE ADMIN SDK SETUP ---
-const admin = require('firebase-admin');
-
-let serviceAccount;
-
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  try {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  } catch (err) {
-    console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT env variable as JSON:", err.message);
-    process.exit(1);
-  }
-} else {
-    try {
-        serviceAccount = require('./serviceAccountKey.json');
-    } catch (err) {
-        console.error("❌ Firebase credentials missing! Provide FIREBASE_SERVICE_ACCOUNT env var or serviceAccountKey.json");
-        process.exit(1);
-    }
-}
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -38,8 +16,40 @@ const windowLocks = {};
 
 // --- 1. CONFIGURATION ---
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; 
-const uri = "mongodb://deynyelicawalo_db_user:h9sM5NYNeO0R96vw@ac-bbriiqg-shard-00-00.yeogezu.mongodb.net:27017,ac-bbriiqg-shard-00-01.yeogezu.mongodb.net:27017,ac-bbriiqg-shard-00-02.yeogezu.mongodb.net:27017/?ssl=true&replicaSet=atlas-uamnqz-shard-0&authSource=admin&appName=Cluster0";
-const client = new MongoClient(uri);
+const LOCAL_MODE = process.env.LOCAL_MODE === '1' || process.env.PSA_LOCAL_MODE === '1';
+const SYSTEM_NAME = process.env.SYSTEM_NAME || process.env.PSA_SYSTEM_NAME || (LOCAL_MODE ? 'PSA Queuing' : 'PSA Queue Management System V2');
+const LOCAL_DB_PATH = process.env.LOCAL_DB_PATH || path.join(__dirname, 'data', 'psa-queuing-local.json');
+const LOCAL_ADMIN_EMAIL = process.env.LOCAL_ADMIN_EMAIL || 'admin@psa.local';
+const LOCAL_ADMIN_PASSWORD = process.env.LOCAL_ADMIN_PASSWORD || 'Admin@12345';
+const uri = process.env.MONGODB_URI || "mongodb://deynyelicawalo_db_user:h9sM5NYNeO0R96vw@ac-bbriiqg-shard-00-00.yeogezu.mongodb.net:27017,ac-bbriiqg-shard-00-01.yeogezu.mongodb.net:27017,ac-bbriiqg-shard-00-02.yeogezu.mongodb.net:27017/?ssl=true&replicaSet=atlas-uamnqz-shard-0&authSource=admin&appName=Cluster0";
+const client = LOCAL_MODE ? null : new MongoClient(uri);
+
+let admin = null;
+let firebaseAdminReady = false;
+
+if (!LOCAL_MODE || process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+        admin = require('firebase-admin');
+        let serviceAccount;
+
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        } else {
+            serviceAccount = require('./serviceAccountKey.json');
+        }
+
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+        firebaseAdminReady = true;
+    } catch (err) {
+        if (!LOCAL_MODE) {
+            console.error("❌ Firebase credentials missing! Provide FIREBASE_SERVICE_ACCOUNT env var or serviceAccountKey.json");
+            process.exit(1);
+        }
+        console.warn(`⚠️ Firebase Admin disabled in local mode: ${err.message}`);
+    }
+}
 
 let db;
 let adminOTPs = {};
@@ -118,6 +128,58 @@ function buildDateFilter(dateString) {
     if (!start) return null;
     const end = new Date(start.getTime() + 24 * 3600000);
     return { iso_timestamp: { $gte: start, $lt: end } };
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+    const hash = crypto.pbkdf2Sync(String(password), salt, 120000, 32, 'sha256').toString('hex');
+    return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedHash) {
+    if (!storedHash || !String(storedHash).includes(':')) return false;
+    const [salt, expectedHash] = String(storedHash).split(':');
+    const actualHash = crypto.pbkdf2Sync(String(password), salt, 120000, 32, 'sha256').toString('hex');
+    const actualBuffer = Buffer.from(actualHash, 'hex');
+    const expectedBuffer = Buffer.from(expectedHash, 'hex');
+    return actualBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function sanitizeEmployeeAccount(account) {
+    if (!account) return account;
+    const { passwordHash, ...safeAccount } = account;
+    return safeAccount;
+}
+
+async function ensureLocalAdminAccount() {
+    if (!LOCAL_MODE || !db) return;
+
+    const existing = await db.collection('employee_accounts').findOne({ email: LOCAL_ADMIN_EMAIL });
+    const adminProfile = {
+        email: LOCAL_ADMIN_EMAIL,
+        role: 'admin',
+        firstName: 'Local',
+        lastName: 'Administrator',
+        employeeId: 'LOCAL-ADMIN',
+        updatedAt: new Date()
+    };
+
+    if (!existing) {
+        await db.collection('employee_accounts').insertOne({
+            ...adminProfile,
+            passwordHash: hashPassword(LOCAL_ADMIN_PASSWORD),
+            createdAt: new Date()
+        });
+        console.log(`🔐 Local admin ready: ${LOCAL_ADMIN_EMAIL}`);
+        return;
+    }
+
+    if (!existing.passwordHash) {
+        await db.collection('employee_accounts').updateOne(
+            { email: LOCAL_ADMIN_EMAIL },
+            { $set: { ...adminProfile, passwordHash: hashPassword(LOCAL_ADMIN_PASSWORD) } }
+        );
+        console.log(`🔐 Local admin password initialized: ${LOCAL_ADMIN_EMAIL}`);
+    }
 }
 
 async function ensureDailyTicketReset() {
@@ -265,8 +327,16 @@ setInterval(processExpiredRequeuedTickets, 30000);
 // --- 4. DATABASE CONNECTION ---
 async function connectDB() {
     try {
-        await client.connect();
-        db = client.db('psa_queue_system');
+        if (LOCAL_MODE) {
+            db = createLocalDatabase(LOCAL_DB_PATH);
+            await ensureLocalAdminAccount();
+            console.log(`✅ Local database ready: ${LOCAL_DB_PATH}`);
+        } else {
+            await client.connect();
+            db = client.db(process.env.MONGODB_DB || 'psa_queue_system');
+            console.log("✅ Connected to MongoDB Atlas: Archive & History Ready");
+        }
+
         const saved = await db.collection('system_state').findOne({ id: 'active_queue' }); 
         if (saved) {
             queueStore = saved.queueStore || queueStore;
@@ -278,7 +348,6 @@ async function connectDB() {
             }
             console.log("🔄 Persistent State Recovered");
         }
-        console.log("✅ Connected to MongoDB Atlas: Archive & History Ready");
         scheduleMidnightReset();
     } catch (e) { console.error("❌ DB Failed:", e.message); process.exit(1); }
 }
@@ -316,13 +385,59 @@ function getWindowName(windowKey) {
 }
 
 // --- 5. API ROUTES ---
+app.get('/api/config', (req, res) => {
+    res.json({
+        systemName: SYSTEM_NAME,
+        localMode: LOCAL_MODE,
+        defaultLocalAdminEmail: LOCAL_MODE ? LOCAL_ADMIN_EMAIL : undefined
+    });
+});
+
+app.post('/api/local-login', async (req, res) => {
+    try {
+        if (!LOCAL_MODE) return res.status(404).json({ success: false, error: 'Local login is disabled' });
+
+        const email = String(req.body.email || '').trim();
+        const password = String(req.body.password || '');
+        if (!email || !password) return res.status(400).json({ success: false, error: 'Email and password are required' });
+
+        const account = await db.collection('employee_accounts').findOne({ email });
+        if (!account || account.role === 'banned' || !verifyPassword(password, account.passwordHash)) {
+            return res.status(401).json({ success: false, error: 'Invalid email or password' });
+        }
+
+        await logEvent('auth_logs', {
+            email,
+            userId: email,
+            action: 'LOCAL_LOGIN',
+            status: 'login',
+            windows: 'N/A'
+        });
+
+        res.json({
+            success: true,
+            user: {
+                email,
+                uid: email,
+                role: account.role || 'controller',
+                firstName: account.firstName,
+                lastName: account.lastName,
+                employeeId: account.employeeId
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 app.post('/api/send-welcome-email', async (req, res) => {
+    if (LOCAL_MODE) return res.json({ success: true, localMode: true });
+
     const { email, tempPassword, firstName } = req.body;
 
     const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-            <h2 style="color: #2c5364; text-align: center;">Welcome to the PSA Queue System!</h2>
+            <h2 style="color: #2c5364; text-align: center;">Welcome to PSA Queuing!</h2>
             <p>Hello ${firstName || 'Staff'},</p>
             <p>An administrator has created an account for you. Below are your temporary login credentials:</p>
             <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
@@ -344,7 +459,7 @@ app.post('/api/send-welcome-email', async (req, res) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 to: email,
-                subject: 'Welcome to the PSA Queue System - Your Account Details',
+                subject: 'Welcome to PSA Queuing - Your Account Details',
                 html: htmlContent
             })
         });
@@ -384,7 +499,7 @@ app.post('/api/check-user-exists', async (req, res) => {
 app.get('/api/system-logs/roles', async (req, res) => {
     try {
         if (!db) return res.status(500).json({ success: false, error: "Database offline" });
-        const roles = await db.collection('employee_accounts').find({}).toArray();
+        const roles = (await db.collection('employee_accounts').find({}).toArray()).map(sanitizeEmployeeAccount);
         res.json({ success: true, roles });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -397,6 +512,7 @@ app.post('/api/get-role', async (req, res) => {
         let user = await db.collection('employee_accounts').findOne({ email: email });
         
         const masterAdmins = ['akosideynyel@gmail.com', 'marviccanque@gmail.com', 'paultimothy1477@gmail.com']; 
+        if (LOCAL_MODE) masterAdmins.push(LOCAL_ADMIN_EMAIL);
         
         // FIX: Default to 'unauthorized' if they don't exist in DB to prevent deleted Firebase accounts from logging in.
         let finalRole = 'unauthorized';
@@ -444,7 +560,7 @@ app.get('/api/get-employee', async (req, res) => {
 
         if (employee) {
             console.log(`[SERVER] Success! Found profile for: ${userEmail}`);
-            res.json({ success: true, employee: employee });
+            res.json({ success: true, employee: sanitizeEmployeeAccount(employee) });
         } else {
             console.log(`[SERVER] User not found in database: ${userEmail}`);
             res.json({ success: false, message: "User not found" });
@@ -456,10 +572,16 @@ app.get('/api/get-employee', async (req, res) => {
 });
 
 app.post('/api/set-role', async (req, res) => {
+    const body = { ...req.body };
+    if (LOCAL_MODE && body.localPassword) {
+        body.passwordHash = hashPassword(body.localPassword);
+        delete body.localPassword;
+    }
+
     await db.collection('employee_accounts').updateOne(
-        { email: req.body.email }, 
+        { email: body.email }, 
         { 
-            $set: { ...req.body, updatedAt: new Date() },
+            $set: { ...body, updatedAt: new Date() },
             $setOnInsert: { createdAt: new Date() }
         }, 
         { upsert: true }
@@ -487,9 +609,13 @@ app.delete('/api/delete-user/:email', async (req, res) => {
         const emailToDelete = req.params.email;
         
         try {
-            const userRecord = await admin.auth().getUserByEmail(emailToDelete);
-            await admin.auth().deleteUser(userRecord.uid);
-            console.log(`[SERVER] Successfully deleted user from Firebase Auth: ${emailToDelete}`);
+            if (!firebaseAdminReady) {
+                console.log(`[SERVER] Firebase Admin unavailable; deleting local record only: ${emailToDelete}`);
+            } else {
+                const userRecord = await admin.auth().getUserByEmail(emailToDelete);
+                await admin.auth().deleteUser(userRecord.uid);
+                console.log(`[SERVER] Successfully deleted user from Firebase Auth: ${emailToDelete}`);
+            }
         } catch (firebaseErr) {
             console.error(`[SERVER] Error deleting user from Firebase Auth:`, firebaseErr.message);
 
@@ -1233,6 +1359,26 @@ io.on('connection', (socket) => {
             await logEvent('ticket_logs', { label: ticket.label, department: dept, action: 'TERMINATED', reason: 'Manual termination by staff' });
             await saveCurrentState();
             syncState();
+        }
+    });
+
+    socket.on('update_user_location', (location) => {
+        if (activeUsers[socket.id]) {
+            activeUsers[socket.id].location = location;
+            activeUsers[socket.id].lastSeen = new Date();
+            broadcastActiveUsers();
+        }
+    });
+
+    socket.on('kick_user', (email) => {
+        if (!email) return;
+        io.emit('force_logout_signal', email);
+    });
+
+    socket.on('user_logout', () => {
+        if (activeUsers[socket.id]) {
+            delete activeUsers[socket.id];
+            broadcastActiveUsers();
         }
     });
 

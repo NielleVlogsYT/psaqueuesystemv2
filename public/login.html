@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PSA Queue - Login</title>
+    <title>PSA Queuing - Login</title>
     <link rel="icon" type="image/png" href="./res/PSA.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -260,7 +260,7 @@
         <div class="brand-section">
             <img src="./res/PSA.png" alt="PSA Logo" class="mini-logo" style="width: 140px; height: auto; margin-bottom: -10px; display: block; margin-left: -20px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));">
             <h1 class="brand-title">Philippine<br>Statistics<br>Authority</h1>
-            <h2 class="brand-subtitle">Queueing System</h2>
+            <h2 class="brand-subtitle">PSA Queuing</h2>
         </div>
 
         <div class="login-section">
@@ -308,8 +308,11 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+        const appConfig = await fetch('/api/config').then(res => res.json()).catch(() => ({ localMode: false }));
+        let auth = null;
+        let signInWithEmailAndPassword = null;
+        let sendPasswordResetEmail = null;
+        let signOut = null;
 
         const firebaseConfig = {
             apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
@@ -320,8 +323,20 @@
             appId: "1:869956656004:web:3d2a98bea880c701605bd1"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        if (appConfig.localMode) {
+            document.title = `${appConfig.systemName || 'PSA Queuing'} - Login`;
+            const defaultEmail = appConfig.defaultLocalAdminEmail || '';
+            const loginEmail = document.getElementById('loginEmail');
+            if (loginEmail && !loginEmail.value) loginEmail.value = defaultEmail;
+        } else {
+            const firebaseApp = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js");
+            const firebaseAuth = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js");
+            const app = firebaseApp.initializeApp(firebaseConfig);
+            auth = firebaseAuth.getAuth(app);
+            signInWithEmailAndPassword = firebaseAuth.signInWithEmailAndPassword;
+            sendPasswordResetEmail = firebaseAuth.sendPasswordResetEmail;
+            signOut = firebaseAuth.signOut;
+        }
 
         function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()); }
         function validatePassword(password) {
@@ -351,6 +366,34 @@
             btnLogin.disabled = true;
             status.innerText = '';
             try {
+                if (appConfig.localMode) {
+                    const response = await fetch('/api/local-login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password: pass })
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.error || 'Invalid email or password.');
+
+                    const user = result.user;
+                    await logAuthActivity('LOCAL_USER_LOGIN', user.email);
+                    localStorage.setItem('psa_local_session', JSON.stringify(user));
+                    localStorage.setItem('psa_admin_token', user.email);
+                    localStorage.setItem('psa_role', user.role);
+
+                    const targetUrl = user.role === 'admin' ? "admin_dashboard.html" : "queue-control.html";
+                    document.getElementById('successModalMessage').innerText = 'Account successfully logged in.';
+                    document.getElementById('loginSuccessModal').classList.add('active');
+
+                    setTimeout(() => {
+                        const transitionLink = document.createElement('a');
+                        transitionLink.href = targetUrl;
+                        document.body.appendChild(transitionLink);
+                        transitionLink.click();
+                    }, 1200);
+                    return;
+                }
+
                 const userCredential = await signInWithEmailAndPassword(auth, email, pass);
                 const userEmail = userCredential.user.email;
                 const response = await fetch('/api/get-role', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userEmail }) });
@@ -453,6 +496,11 @@
             const status = document.getElementById('forgotStep1Status');
 
             if (!email) { status.innerText = "Please enter your email."; return; }
+            if (appConfig.localMode) {
+                status.classList.remove('success');
+                status.innerText = "Local mode passwords are managed by the PSA Queuing administrator.";
+                return;
+            }
 
             status.classList.remove('success');
             status.innerText = "Sending password reset email...";

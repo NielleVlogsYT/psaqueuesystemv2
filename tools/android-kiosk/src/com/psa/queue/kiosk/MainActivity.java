@@ -71,13 +71,13 @@ public class MainActivity extends Activity {
     }
 
     private void showOfflinePage() {
-        String networkText = isConnected() ? "The PSA Queue page is not responding." : "No network connection is available.";
+        String networkText = isConnected() ? "The PSA Queuing page is not responding." : "No network connection is available.";
         String html =
             "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>" +
             "<style>body{margin:0;font-family:sans-serif;background:#f8fafc;color:#0f172a;display:grid;place-items:center;min-height:100vh;text-align:center}" +
             ".box{max-width:520px;padding:28px}.title{font-size:28px;font-weight:700;margin-bottom:10px}.msg{font-size:16px;color:#475569;margin-bottom:22px}" +
             "button{border:0;background:#0d6efd;color:white;padding:14px 22px;border-radius:8px;font-size:16px;font-weight:700}</style></head>" +
-            "<body><div class='box'><div class='title'>PSA Kiosk</div><div class='msg'>" + networkText + "</div>" +
+            "<body><div class='box'><div class='title'>PSA Queuing Kiosk</div><div class='msg'>" + networkText + "</div>" +
             "<button onclick=\"location.href='" + KIOSK_URL + "'\">Retry</button></div></body></html>";
 
         webView.loadDataWithBaseURL(KIOSK_URL, html, "text/html", "UTF-8", null);

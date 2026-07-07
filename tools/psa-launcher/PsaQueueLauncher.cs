@@ -26,8 +26,8 @@ namespace PsaQueueLauncher
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    "Unable to launch the PSA Queue page." + Environment.NewLine + Environment.NewLine + ex.Message,
-                    "PSA Queue Launcher",
+                    "Unable to launch the PSA Queuing page." + Environment.NewLine + Environment.NewLine + ex.Message,
+                    "PSA Queuing Launcher",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
                 return 1;
@@ -79,6 +79,7 @@ namespace PsaQueueLauncher
             string[] candidates =
             {
                 Path.Combine(directory, executableName + ".url.txt"),
+                Path.Combine(directory, "psa-queuing.url.txt"),
                 Path.Combine(directory, "psa-queue.url.txt")
             };
 

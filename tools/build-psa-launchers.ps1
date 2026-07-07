@@ -38,5 +38,7 @@ function Build-Launcher($outputPath, $iconPath = $null) {
 
 Build-Launcher (Join-Path $outputDir "PSA_Queue_Browser.exe") $browserIcon
 Build-Launcher (Join-Path $outputDir "PSA_Queue_SecondMonitor.exe")
+Build-Launcher (Join-Path $outputDir "PSA_Queuing_Browser.exe") $browserIcon
+Build-Launcher (Join-Path $outputDir "PSA_Queuing_SecondMonitor.exe")
 
 Write-Host "Built PSA queue launcher executables in $outputDir"

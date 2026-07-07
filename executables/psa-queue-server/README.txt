@@ -1,4 +1,4 @@
-PSA Queue Management System V2
+PSA Queuing
 
 Developers:
 Jhon Denielle Icawalo
@@ -12,7 +12,7 @@ User Guide & System Documentation
 OVERVIEW
 ============================================================
 
-The PSA Queue Management System v2 is a web-based queue management platform designed to streamline customer service operations in Philippine Statistics Authority (PSA) service centers.
+PSA Queuing is a web-based queue management platform designed to streamline customer service operations in Philippine Statistics Authority (PSA) service centers.
 
 The system automates ticket issuance, queue monitoring, customer calling, service window management, and operational reporting through a real-time dashboard powered by Socket.IO and MongoDB.
 
@@ -220,9 +220,19 @@ BENEFITS
 VERSION INFORMATION
 ============================================================
 
-System Name: PSA Queue Management System v2
+System Name: PSA Queuing
 Version: 2.0
 Platform: Web-Based Queue Management System
+
+Local PSA Queuing Mode
+----------------------
+Use start_psa_queuing_local.bat to run PSA Queuing from the local PC/LAN without MongoDB Atlas.
+
+Default local admin:
+Email: admin@psa.local
+Password: Admin@12345
+
+Local data is saved to data\psa-queuing-local.json and is ignored by Git.
 Technology Stack: Node.js, Express.js, MongoDB, Socket.IO, HTML, CSS, JavaScript
 
 Developed for efficient queue management, real-time customer service monitoring, and operational reporting within PSA service centers.

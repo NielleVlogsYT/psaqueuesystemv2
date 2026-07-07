@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>PSA Queue - Department Selection</title>
+    <title>PSA Queuing - Department Selection</title>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -183,8 +183,11 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-        import { getAuth, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+        const appConfig = await fetch('/api/config').then(res => res.json()).catch(() => ({ localMode: false }));
+        let auth = null;
+        let signOut = null;
+        let onAuthStateChanged = null;
+        let sendPasswordResetEmail = null;
 
         const firebaseConfig = {
             apiKey: "AIzaSyBv0Bnx7ESj_roRTB137vWJ7KLTDXR1C8Y",
@@ -195,8 +198,33 @@
             appId: "1:869956656004:web:3d2a98bea880c701605bd1"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        const getLocalSession = () => {
+            try {
+                return JSON.parse(localStorage.getItem('psa_local_session') || 'null');
+            } catch (err) {
+                return null;
+            }
+        };
+
+        if (appConfig.localMode) {
+            document.title = `${appConfig.systemName || 'PSA Queuing'} - Department Selection`;
+            auth = { get currentUser() { return getLocalSession(); } };
+            signOut = async () => {
+                localStorage.removeItem('psa_local_session');
+            };
+            onAuthStateChanged = (_auth, callback) => callback(_auth.currentUser);
+            sendPasswordResetEmail = async () => {
+                throw new Error('Local mode passwords are managed by the PSA Queuing administrator.');
+            };
+        } else {
+            const firebaseApp = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js");
+            const firebaseAuth = await import("https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js");
+            const app = firebaseApp.initializeApp(firebaseConfig);
+            auth = firebaseAuth.getAuth(app);
+            signOut = firebaseAuth.signOut;
+            onAuthStateChanged = firebaseAuth.onAuthStateChanged;
+            sendPasswordResetEmail = firebaseAuth.sendPasswordResetEmail;
+        }
         const socket = io();
 
         let selectedDepartmentId = "";

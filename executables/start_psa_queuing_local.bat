@@ -5,7 +5,7 @@ cd /d "%~dp0"
 
 set LOCAL_MODE=1
 set PSA_SYSTEM_NAME=PSA Queuing
-set LOCAL_DB_PATH=%~dp0data\psa-queuing-local.json
+set LOCAL_DB_PATH=%~dp0psa-queue-server\data\psa-queuing-local.json
 set LOCAL_ADMIN_EMAIL=admin@psa.local
 if "%LOCAL_ADMIN_PASSWORD%"=="" set LOCAL_ADMIN_PASSWORD=Admin@12345
 
@@ -21,12 +21,15 @@ for /l %%p in (3000,1,3010) do (
 :portFound
 if "%PORT%"=="" set PORT=3000
 
+echo localhost:%PORT%> "%~dp0psa-queuing.url.txt"
+echo localhost:%PORT%> "%~dp0psa-queue.url.txt"
+
 echo Starting PSA Queuing local system...
 echo Local admin email: %LOCAL_ADMIN_EMAIL%
 echo Local admin password: %LOCAL_ADMIN_PASSWORD%
 echo Local port: %PORT%
 
-start "PSA Queuing Local Server" /min cmd /c "node server.js"
+start "PSA Queuing Local Server" /min /d "%~dp0psa-queue-server" cmd /c "node server.js"
 
 echo Finding local IP address...
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /i "IPv4"') do (
@@ -44,6 +47,10 @@ echo Using IP: %IP%
 timeout /t 2 /nobreak >nul
 
 echo Opening PSA Queuing...
-start chrome --start-fullscreen "http://%IP%:%PORT%/login.html"
+if exist "%~dp0PSA_Queuing_Browser.exe" (
+    start "" "%~dp0PSA_Queuing_Browser.exe"
+) else (
+    start chrome --start-fullscreen "http://%IP%:%PORT%/login.html"
+)
 
 exit
